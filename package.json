@@ -1,0 +1,621 @@
+{
+  "name": "vetspresso-issues",
+  "displayName": "Vetspresso Issues Tracker",
+  "description": "A project-specific, team-sharable issue tracker for VS Code. Track bugs, enhancements, features and tasks — all linked to your code, commits, and version history.",
+  "version": "0.1.0",
+  "publisher": "Bonfisoft",
+  "author": {
+    "name": "Alberto L. Bonfiglio"
+  },
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vetspresso/vetspresso-issues.git"
+  },
+  "bugs": {
+    "url": "https://github.com/vetspresso/vetspresso-issues/issues"
+  },
+  "homepage": "https://github.com/vetspresso/vetspresso-issues#readme",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "issues",
+    "bug tracker",
+    "project management",
+    "tasks",
+    "git",
+    "tracker",
+    "changelog"
+  ],
+  "icon": "media/icons/extension-icon.png",
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "node esbuild.js --production",
+    "lint": "eslint src --ext ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/sinon": "^21.0.0",
+    "@types/vscode": "^1.85.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.2",
+    "@typescript-eslint/parser": "^8.57.2",
+    "@vitest/coverage-v8": "^4.1.2",
+    "esbuild": "^0.27.4",
+    "eslint": "^10.1.0",
+    "sinon": "^21.0.3",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.2"
+  },
+  
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "vetspresso-issues-container",
+          "title": "Issues Tracker",
+          "icon": "media/icons/sidebar.svg"
+        }
+      ]
+    },
+    "views": {
+      "vetspresso-issues-container": [
+        {
+          "id": "vetspresso-issues.issueExplorer",
+          "name": "Issues",
+          "type": "tree",
+          "icon": "media/icons/view-issues.svg"
+        },
+        {
+          "id": "vetspresso-issues.milestoneView",
+          "name": "Milestones",
+          "type": "tree",
+          "icon": "media/icons/view-milestones.svg"
+        },
+        {
+          "id": "vetspresso-issues.sprintView",
+          "name": "Sprints",
+          "type": "tree",
+          "icon": "media/icons/view-sprints.svg"
+        },
+        {
+          "id": "vetspresso-issues.timeView",
+          "name": "Time Tracking",
+          "type": "tree",
+          "icon": "media/icons/view-time.svg"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "vetspresso-issues.createIssue",
+        "title": "Create Issue",
+        "category": "Issues",
+        "icon": "$(add)"
+      },
+      {
+        "command": "vetspresso-issues.editIssue",
+        "title": "Edit Issue",
+        "category": "Issues",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vetspresso-issues.deleteIssue",
+        "title": "Delete Issue",
+        "category": "Issues",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vetspresso-issues.closeIssue",
+        "title": "Close Issue",
+        "category": "Issues",
+        "icon": "$(circle-slash)"
+      },
+      {
+        "command": "vetspresso-issues.reopenIssue",
+        "title": "Reopen Issue",
+        "category": "Issues",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vetspresso-issues.resolveIssue",
+        "title": "Mark as Resolved",
+        "category": "Issues",
+        "icon": "$(check)"
+      },
+      {
+        "command": "vetspresso-issues.viewIssue",
+        "title": "View Issue Details",
+        "category": "Issues",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "vetspresso-issues.linkCodeToIssue",
+        "title": "Link Selection to Issue",
+        "category": "Issues",
+        "icon": "$(link)"
+      },
+      {
+        "command": "vetspresso-issues.unlinkCode",
+        "title": "Remove Code Link from Issue",
+        "category": "Issues"
+      },
+      {
+        "command": "vetspresso-issues.openDashboard",
+        "title": "Open Dashboard",
+        "category": "Issues",
+        "icon": "$(graph)"
+      },
+      {
+        "command": "vetspresso-issues.searchIssues",
+        "title": "Search Issues",
+        "category": "Issues",
+        "icon": "$(search)"
+      },
+      {
+        "command": "vetspresso-issues.filterIssues",
+        "title": "Filter Issues",
+        "category": "Issues",
+        "icon": "$(filter)"
+      },
+      {
+        "command": "vetspresso-issues.clearFilter",
+        "title": "Clear Filter",
+        "category": "Issues",
+        "icon": "$(close)"
+      },
+      {
+        "command": "vetspresso-issues.generateChangelog",
+        "title": "Generate Changelog",
+        "category": "Issues",
+        "icon": "$(output)"
+      },
+      {
+        "command": "vetspresso-issues.exportIssues",
+        "title": "Export Issues",
+        "category": "Issues",
+        "icon": "$(export)"
+      },
+      {
+        "command": "vetspresso-issues.importIssues",
+        "title": "Import Issues",
+        "category": "Issues",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "vetspresso-issues.createMilestone",
+        "title": "Create Milestone",
+        "category": "Issues",
+        "icon": "$(milestone)"
+      },
+      {
+        "command": "vetspresso-issues.editMilestone",
+        "title": "Edit Milestone",
+        "category": "Issues",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vetspresso-issues.deleteMilestone",
+        "title": "Delete Milestone",
+        "category": "Issues",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vetspresso-issues.createSprint",
+        "title": "Create Sprint",
+        "category": "Issues",
+        "icon": "$(add)"
+      },
+      {
+        "command": "vetspresso-issues.editSprint",
+        "title": "Edit Sprint",
+        "category": "Issues",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vetspresso-issues.deleteSprint",
+        "title": "Delete Sprint",
+        "category": "Issues",
+        "icon": "$(trash)"
+      },
+      {
+        "command": "vetspresso-issues.logTime",
+        "title": "Log Time on Issue",
+        "category": "Issues",
+        "icon": "$(clock)"
+      },
+      {
+        "command": "vetspresso-issues.refreshIssues",
+        "title": "Refresh Issues",
+        "category": "Issues",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vetspresso-issues.copyIssueId",
+        "title": "Copy Issue Reference",
+        "category": "Issues",
+        "icon": "$(copy)"
+      },
+      {
+        "command": "vetspresso-issues.copyIssueUrl",
+        "title": "Copy Issue URL",
+        "category": "Issues"
+      },
+      {
+        "command": "vetspresso-issues.openCurrentVersionIssues",
+        "title": "Issues for Current Version",
+        "category": "Issues",
+        "icon": "$(tag)"
+      },
+      {
+        "command": "vetspresso-issues.markStale",
+        "title": "Mark Issue as Stale",
+        "category": "Issues"
+      },
+      {
+        "command": "vetspresso-issues.addComment",
+        "title": "Add Comment to Issue",
+        "category": "Issues",
+        "icon": "$(comment)"
+      },
+      {
+        "command": "vetspresso-issues.addRelation",
+        "title": "Add Issue Relation",
+        "category": "Issues",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "vetspresso-issues.createFromTemplate",
+        "title": "Create Issue from Template",
+        "category": "Issues",
+        "icon": "$(file-add)"
+      },
+      {
+        "command": "vetspresso-issues.manageTemplates",
+        "title": "Manage Issue Templates",
+        "category": "Issues"
+      },
+      {
+        "command": "vetspresso-issues.groupBy",
+        "title": "Group Issues By...",
+        "category": "Issues",
+        "icon": "$(list-ordered)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "vetspresso-issues.linkCodeToIssue",
+          "group": "vetspresso-issues@1",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "vetspresso-issues.createIssue",
+          "group": "vetspresso-issues@2"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "vetspresso-issues.createIssue",
+          "when": "view == vetspresso-issues.issueExplorer",
+          "group": "navigation@1"
+        },
+        {
+          "command": "vetspresso-issues.refreshIssues",
+          "when": "view == vetspresso-issues.issueExplorer",
+          "group": "navigation@2"
+        },
+        {
+          "command": "vetspresso-issues.searchIssues",
+          "when": "view == vetspresso-issues.issueExplorer",
+          "group": "navigation@3"
+        },
+        {
+          "command": "vetspresso-issues.filterIssues",
+          "when": "view == vetspresso-issues.issueExplorer",
+          "group": "navigation@4"
+        },
+        {
+          "command": "vetspresso-issues.openDashboard",
+          "when": "view == vetspresso-issues.issueExplorer",
+          "group": "navigation@5"
+        },
+        {
+          "command": "vetspresso-issues.groupBy",
+          "when": "view == vetspresso-issues.issueExplorer",
+          "group": "1_view@1"
+        },
+        {
+          "command": "vetspresso-issues.generateChangelog",
+          "when": "view == vetspresso-issues.issueExplorer",
+          "group": "2_actions@1"
+        },
+        {
+          "command": "vetspresso-issues.exportIssues",
+          "when": "view == vetspresso-issues.issueExplorer",
+          "group": "2_actions@2"
+        },
+        {
+          "command": "vetspresso-issues.createMilestone",
+          "when": "view == vetspresso-issues.milestoneView",
+          "group": "navigation"
+        },
+        {
+          "command": "vetspresso-issues.createSprint",
+          "when": "view == vetspresso-issues.sprintView",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "vetspresso-issues.viewIssue",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "inline@1"
+        },
+        {
+          "command": "vetspresso-issues.editIssue",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "1_modify@1"
+        },
+        {
+          "command": "vetspresso-issues.resolveIssue",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "1_modify@2"
+        },
+        {
+          "command": "vetspresso-issues.closeIssue",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "1_modify@3"
+        },
+        {
+          "command": "vetspresso-issues.reopenIssue",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "1_modify@4"
+        },
+        {
+          "command": "vetspresso-issues.addComment",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "2_interact@1"
+        },
+        {
+          "command": "vetspresso-issues.logTime",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "2_interact@2"
+        },
+        {
+          "command": "vetspresso-issues.addRelation",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "2_interact@3"
+        },
+        {
+          "command": "vetspresso-issues.linkCodeToIssue",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue && editorHasSelection",
+          "group": "2_interact@4"
+        },
+        {
+          "command": "vetspresso-issues.copyIssueId",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "3_copy@1"
+        },
+        {
+          "command": "vetspresso-issues.deleteIssue",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "4_delete"
+        },
+        {
+          "command": "vetspresso-issues.editMilestone",
+          "when": "view == vetspresso-issues.milestoneView && viewItem == milestone",
+          "group": "1_modify"
+        },
+        {
+          "command": "vetspresso-issues.deleteMilestone",
+          "when": "view == vetspresso-issues.milestoneView && viewItem == milestone",
+          "group": "2_delete"
+        },
+        {
+          "command": "vetspresso-issues.editSprint",
+          "when": "view == vetspresso-issues.sprintView && viewItem == sprint",
+          "group": "1_modify"
+        },
+        {
+          "command": "vetspresso-issues.deleteSprint",
+          "when": "view == vetspresso-issues.sprintView && viewItem == sprint",
+          "group": "2_delete"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "vetspresso-issues.createIssue"
+        },
+        {
+          "command": "vetspresso-issues.searchIssues"
+        },
+        {
+          "command": "vetspresso-issues.openDashboard"
+        },
+        {
+          "command": "vetspresso-issues.generateChangelog"
+        },
+        {
+          "command": "vetspresso-issues.exportIssues"
+        },
+        {
+          "command": "vetspresso-issues.importIssues"
+        },
+        {
+          "command": "vetspresso-issues.openCurrentVersionIssues"
+        },
+        {
+          "command": "vetspresso-issues.createMilestone"
+        },
+        {
+          "command": "vetspresso-issues.createSprint"
+        },
+        {
+          "command": "vetspresso-issues.createFromTemplate"
+        },
+        {
+          "command": "vetspresso-issues.manageTemplates"
+        },
+        {
+          "command": "vetspresso-issues.filterIssues"
+        },
+        {
+          "command": "vetspresso-issues.clearFilter"
+        },
+        {
+          "command": "vetspresso-issues.linkCodeToIssue",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "vetspresso-issues.editIssue",
+          "when": "false"
+        },
+        {
+          "command": "vetspresso-issues.deleteIssue",
+          "when": "false"
+        },
+        {
+          "command": "vetspresso-issues.viewIssue",
+          "when": "false"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Vetspresso Issues Tracker",
+      "properties": {
+        "vetspresso-issues.storageLocation": {
+          "type": "string",
+          "enum": [
+            "workspace",
+            "global"
+          ],
+          "enumDescriptions": [
+            "Store issues in .vscode/issues/ within the project (sharable via git)",
+            "Store issues in VS Code's global storage (local machine only, private)"
+          ],
+          "default": "workspace",
+          "description": "Where to store issue data. 'workspace' places data in .vscode/issues/ so issues can be shared with teammates via git. 'global' keeps them private to this machine."
+        },
+        "vetspresso-issues.multiRootStorage": {
+          "type": "string",
+          "enum": [
+            "shared",
+            "perFolder"
+          ],
+          "enumDescriptions": [
+            "One shared issue store for all workspace folders (first folder is the primary)",
+            "Each workspace folder has its own isolated issue store"
+          ],
+          "default": "shared",
+          "description": "In multi-root workspaces, whether to use one shared issue store or separate stores per folder."
+        },
+        "vetspresso-issues.showStatusBar": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show an issue summary (open/critical counts) in the status bar."
+        },
+        "vetspresso-issues.codeLensEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show CodeLens entries above lines of code that are linked to issues."
+        },
+        "vetspresso-issues.gitIntegration": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Git integration for automatic version/tag detection."
+        },
+        "vetspresso-issues.author": {
+          "type": "string",
+          "default": "",
+          "description": "Your name or username, used as the reporter on new issues. Defaults to git user.name if empty."
+        },
+        "vetspresso-issues.defaultAssignee": {
+          "type": "string",
+          "default": "",
+          "description": "Default assignee username for new issues."
+        },
+        "vetspresso-issues.staleIssueDays": {
+          "type": "number",
+          "default": 30,
+          "minimum": 1,
+          "maximum": 3650,
+          "description": "Number of days without activity before an open issue is flagged as stale."
+        },
+        "vetspresso-issues.defaultIssueType": {
+          "type": "string",
+          "enum": [
+            "bug",
+            "enhancement",
+            "feature",
+            "task",
+            "question",
+            "documentation",
+            "other"
+          ],
+          "default": "bug",
+          "description": "Default issue type pre-selected when creating a new issue."
+        },
+        "vetspresso-issues.treeGroupBy": {
+          "type": "string",
+          "enum": [
+            "type",
+            "status",
+            "severity",
+            "milestone",
+            "sprint",
+            "assignee",
+            "none"
+          ],
+          "default": "status",
+          "description": "How to group issues in the tree view."
+        },
+        "vetspresso-issues.showResolvedIssues": {
+          "type": "boolean",
+          "default": false,
+          "description": "Include resolved and closed issues in the main tree view."
+        },
+        "vetspresso-issues.decorationsEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show gutter icons on lines of code linked to issues."
+        }
+      }
+    },
+    "keybindings": [
+      {
+        "command": "vetspresso-issues.createIssue",
+        "key": "ctrl+alt+i",
+        "mac": "cmd+alt+i"
+      },
+      {
+        "command": "vetspresso-issues.searchIssues",
+        "key": "ctrl+alt+shift+f",
+        "mac": "cmd+alt+shift+f"
+      },
+      {
+        "command": "vetspresso-issues.linkCodeToIssue",
+        "key": "ctrl+alt+l",
+        "mac": "cmd+alt+l",
+        "when": "editorHasSelection"
+      },
+      {
+        "command": "vetspresso-issues.openDashboard",
+        "key": "ctrl+alt+d",
+        "mac": "cmd+alt+d"
+      }
+    ]
+  }
+}

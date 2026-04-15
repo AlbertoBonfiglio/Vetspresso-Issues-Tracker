@@ -1,0 +1,17 @@
+.vscode/**
+.github/**
+coverage/**
+src/**
+test/**
+docs/**
+node_modules/**
+.gitignore
+.eslintrc*
+eslint.config.mjs
+tsconfig*.json
+vitest.config.ts
+esbuild.js
+notes.md
+vetspresso.vscode.issues.code-workspace
+**/*.map
+**/.DS_Store
