@@ -56,6 +56,8 @@ export class IssueDatabase {
     private sprints: Sprint[] = [];
     private templates: IssueTemplate[] = [];
     private index: IssueStoreIndex | null = null;
+    private knownTags: string[] = [];
+    private knownPersons: string[] = [];
 
     // VS Code event emitters
     private readonly _onIssueChanged = new vscode.EventEmitter<IssueChangedEvent>();
@@ -85,11 +87,13 @@ export class IssueDatabase {
         }
         await this.storage.initialise();
         await this.loadIndex();
+        await this.loadIssues();
         await Promise.all([
-            this.loadIssues(),
             this.loadMilestones(),
             this.loadSprints(),
             this.loadTemplates(),
+            this.loadKnownTags(),
+            this.loadKnownPersons(),
         ]);
         this.loaded = true;
         logger.info(
@@ -416,6 +420,38 @@ export class IssueDatabase {
         return Array.from(names).sort();
     }
 
+    /** Returns the persisted list of known tags (all ever confirmed, including deleted issues). */
+    getKnownTags(): string[] {
+        return [...this.knownTags];
+    }
+
+    /** Returns the persisted list of known person names (reporters & assignees). */
+    getKnownPersons(): string[] {
+        return [...this.knownPersons];
+    }
+
+    /**
+     * Adds a tag to the known-tags list if it is not already present.
+     * Persists the updated list.
+     */
+    async addKnownTag(tag: string): Promise<void> {
+        const t = tag.trim();
+        if (!t || this.knownTags.includes(t)) { return; }
+        this.knownTags = [...this.knownTags, t].sort();
+        await this.storage.writeKnownTags(this.knownTags);
+    }
+
+    /**
+     * Adds a person name to the known-persons list if it is not already present.
+     * Persists the updated list.
+     */
+    async addKnownPerson(person: string): Promise<void> {
+        const p = person.trim();
+        if (!p || this.knownPersons.includes(p)) { return; }
+        this.knownPersons = [...this.knownPersons, p].sort();
+        await this.storage.writeKnownPersons(this.knownPersons);
+    }
+
     /** Returns the underlying storage provider reference. */
     getStorage(): IStorageProvider {
         return this.storage;
@@ -456,6 +492,31 @@ export class IssueDatabase {
 
     private async loadTemplates(): Promise<void> {
         this.templates = await this.storage.readTemplates();
+    }
+
+    private async loadKnownTags(): Promise<void> {
+        const stored = await this.storage.readKnownTags();
+        // Seed from issue data for backwards-compatibility with existing stores
+        const fromIssues = this.getAllTags();
+        const merged = [...new Set([...stored, ...fromIssues])].sort();
+        this.knownTags = merged;
+        if (merged.length !== stored.length) {
+            await this.storage.writeKnownTags(merged);
+        }
+    }
+
+    private async loadKnownPersons(): Promise<void> {
+        const stored = await this.storage.readKnownPersons();
+        const fromIssues = new Set<string>();
+        for (const issue of this.issueCache.values()) {
+            if (issue.reportedBy) { fromIssues.add(issue.reportedBy); }
+            if (issue.assignedTo) { fromIssues.add(issue.assignedTo); }
+        }
+        const merged = [...new Set([...stored, ...fromIssues])].sort();
+        this.knownPersons = merged;
+        if (merged.length !== stored.length) {
+            await this.storage.writeKnownPersons(merged);
+        }
     }
 
     private async nextSequentialId(): Promise<number> {

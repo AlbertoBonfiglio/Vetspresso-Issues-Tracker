@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { IssueService } from '../services/IssueService';
-import { Milestone, Sprint, SprintStatus } from '../types';
+import { Issue, Milestone, Sprint, SprintStatus } from '../types';
 import * as logger from '../utils/logger';
 
 // ---------------------------------------------------------------------------
@@ -159,6 +159,12 @@ export async function cmdEditSprint(service: IssueService, sprint: Sprint): Prom
     });
     if (!name) { return; }
 
+    const description = await vscode.window.showInputBox({
+        title: `Edit Sprint — Goal`,
+        value: sprint.description ?? '',
+        prompt: 'Sprint goal or summary (optional).',
+    });
+
     const statusChoice = await vscode.window.showQuickPick(
         (['planned', 'active', 'completed'] as SprintStatus[]).map((s) => ({ label: s, picked: s === sprint.status })),
         { title: 'Edit Sprint — Status' }
@@ -168,6 +174,7 @@ export async function cmdEditSprint(service: IssueService, sprint: Sprint): Prom
     try {
         await service.updateSprint(sprint.id, {
             name: name.trim(),
+            description: description?.trim() ?? sprint.description ?? '',
             status: statusChoice.label,
         });
     } catch (err) {
@@ -189,5 +196,73 @@ export async function cmdDeleteSprint(service: IssueService, sprint: Sprint): Pr
         void vscode.window.showInformationMessage(`Sprint "${sprint.name}" deleted.`);
     } catch (err) {
         logger.showError('Failed to delete sprint', err);
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Assign sprint / milestone to an issue
+// ---------------------------------------------------------------------------
+
+export async function cmdAssignSprint(service: IssueService, issue: Issue): Promise<void> {
+    const sprints = service.getSprints();
+    const items: vscode.QuickPickItem[] = [
+        { label: '$(circle-slash) None', description: 'Remove sprint assignment' },
+        ...sprints.map((s) => ({
+            label: s.name,
+            description: s.status,
+            picked: s.id === issue.sprintId,
+        })),
+    ];
+
+    const choice = await vscode.window.showQuickPick(items, {
+        title: `Assign Sprint — Issue #${issue.sequentialId}`,
+        placeHolder: 'Select a sprint, or choose None to remove assignment',
+    });
+    if (!choice) { return; }
+
+    const isNone = choice.label.includes('None');
+    const sprint = isNone ? null : sprints.find((s) => s.name === choice.label);
+    const newSprintId = isNone ? null : (sprint?.id ?? issue.sprintId);
+
+    try {
+        await service.updateIssue(issue.id, { sprintId: newSprintId });
+        const msg = newSprintId
+            ? `Issue #${issue.sequentialId} assigned to sprint "${sprint!.name}".`
+            : `Issue #${issue.sequentialId} removed from sprint.`;
+        void vscode.window.showInformationMessage(msg);
+    } catch (err) {
+        logger.showError('Failed to assign sprint', err);
+    }
+}
+
+export async function cmdAssignMilestone(service: IssueService, issue: Issue): Promise<void> {
+    const milestones = service.getMilestones();
+    const items: vscode.QuickPickItem[] = [
+        { label: '$(circle-slash) None', description: 'Remove milestone assignment' },
+        ...milestones.map((m) => ({
+            label: m.name,
+            ...(m.targetDate ? { description: m.targetDate } : {}),
+            picked: m.id === issue.milestoneId,
+        })),
+    ];
+
+    const choice = await vscode.window.showQuickPick(items, {
+        title: `Assign Milestone — Issue #${issue.sequentialId}`,
+        placeHolder: 'Select a milestone, or choose None to remove assignment',
+    });
+    if (!choice) { return; }
+
+    const isNone = choice.label.includes('None');
+    const milestone = isNone ? null : milestones.find((m) => m.name === choice.label);
+    const newMilestoneId = isNone ? null : (milestone?.id ?? issue.milestoneId);
+
+    try {
+        await service.updateIssue(issue.id, { milestoneId: newMilestoneId });
+        const msg = newMilestoneId
+            ? `Issue #${issue.sequentialId} assigned to milestone "${milestone!.name}".`
+            : `Issue #${issue.sequentialId} removed from milestone.`;
+        void vscode.window.showInformationMessage(msg);
+    } catch (err) {
+        logger.showError('Failed to assign milestone', err);
     }
 }

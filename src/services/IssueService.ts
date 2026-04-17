@@ -55,7 +55,7 @@ export class IssueService {
             .getConfiguration(CONFIG_SECTION)
             .get<number>(CFG_STALE_DAYS, 30);
 
-        let issues = this.db.getAllIssues().map((issue) => ({
+        let issues: Issue[] = this.db.getAllIssues().map((issue) => ({
             ...issue,
             isStale: !isDone(issue) && isOlderThan(issue.updatedAt, staleDays),
         }));
@@ -158,6 +158,15 @@ export class IssueService {
             comments: [],
             workspaceFolder: params.workspaceFolder ?? null,
             templateId: params.templateId ?? null,
+        }).then(async (issue) => {
+            // Auto-register tags and persons for future autocomplete
+            const registrations: Promise<void>[] = [
+                this.db.addKnownPerson(reporter),
+                ...(params.tags ?? []).map((t) => this.db.addKnownTag(t)),
+            ];
+            if (issue.assignedTo) { registrations.push(this.db.addKnownPerson(issue.assignedTo)); }
+            await Promise.all(registrations);
+            return issue;
         });
     }
 
@@ -381,6 +390,10 @@ export class IssueService {
     getCriticalCount() { return this.db.getCriticalCount(); }
     getAllTags() { return this.db.getAllTags(); }
     getAllAssignees() { return this.db.getAllAssignees(); }
+    getKnownTags(): string[] { return this.db.getKnownTags(); }
+    getKnownPersons(): string[] { return this.db.getKnownPersons(); }
+    addKnownTag(tag: string): Promise<void> { return this.db.addKnownTag(tag); }
+    addKnownPerson(person: string): Promise<void> { return this.db.addKnownPerson(person); }
 
     get onIssueChanged() { return this.db.onIssueChanged; }
     get onMetaChanged() { return this.db.onMetaChanged; }

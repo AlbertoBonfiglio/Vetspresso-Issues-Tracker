@@ -6,7 +6,6 @@
  */
 
 import * as assert from 'assert';
-import * as sinon from 'sinon';
 import { IssueDatabase } from '../../src/database/IssueDatabase';
 import { IStorageProvider } from '../../src/storage/IStorageProvider';
 import {
@@ -16,7 +15,6 @@ import {
     IssueTemplate,
     IssueStoreIndex,
 } from '../../src/types';
-import { generateId, nowIso } from '../../src/utils/idGenerator';
 
 // ---------------------------------------------------------------------------
 // In-memory storage stub
@@ -43,6 +41,10 @@ class MemoryStorageProvider implements IStorageProvider {
     async readSprints(): Promise<Sprint[]> { return this.sprints; }
     async writeSprints(ss: Sprint[]): Promise<void> { this.sprints = ss; }
     async readTemplates(): Promise<IssueTemplate[]> { return this.templates; }
+    async readKnownTags(): Promise<string[]> { return []; }
+    async writeKnownTags(_tags: string[]): Promise<void> { }
+    async readKnownPersons(): Promise<string[]> { return []; }
+    async writeKnownPersons(_persons: string[]): Promise<void> { }
     async writeTemplates(ts: IssueTemplate[]): Promise<void> { this.templates = ts; }
     getRootUri() { return this.vscodeUri; }
 }
@@ -220,5 +222,98 @@ describe('IssueDatabase', () => {
         await db.deleteMilestone(m.id);
         const updated = db.getIssue(issue.id);
         assert.strictEqual(updated?.milestoneId, null);
+    });
+
+    // Known tags
+    test('getKnownTags() returns empty list on fresh db', () => {
+        assert.deepStrictEqual(db.getKnownTags(), []);
+    });
+
+    test('addKnownTag() persists and returns in getKnownTags()', async () => {
+        await db.addKnownTag('frontend');
+        await db.addKnownTag('backend');
+        const tags = db.getKnownTags();
+        assert.ok(tags.includes('frontend'));
+        assert.ok(tags.includes('backend'));
+    });
+
+    test('addKnownTag() is idempotent', async () => {
+        await db.addKnownTag('dup');
+        await db.addKnownTag('dup');
+        assert.strictEqual(db.getKnownTags().filter((t) => t === 'dup').length, 1);
+    });
+
+    test('addKnownTag() trims whitespace', async () => {
+        await db.addKnownTag('  trimmed  ');
+        assert.ok(db.getKnownTags().includes('trimmed'));
+    });
+
+    test('addKnownTag() ignores empty string', async () => {
+        await db.addKnownTag('');
+        assert.strictEqual(db.getKnownTags().length, 0);
+    });
+
+    // Known persons
+    test('getKnownPersons() returns empty list on fresh db', () => {
+        assert.deepStrictEqual(db.getKnownPersons(), []);
+    });
+
+    test('addKnownPerson() persists and returns in getKnownPersons()', async () => {
+        await db.addKnownPerson('Alice');
+        await db.addKnownPerson('Bob');
+        const persons = db.getKnownPersons();
+        assert.ok(persons.includes('Alice'));
+        assert.ok(persons.includes('Bob'));
+    });
+
+    test('addKnownPerson() is idempotent', async () => {
+        await db.addKnownPerson('Alice');
+        await db.addKnownPerson('Alice');
+        assert.strictEqual(db.getKnownPersons().filter((p) => p === 'Alice').length, 1);
+    });
+
+    test('addKnownPerson() ignores empty string', async () => {
+        await db.addKnownPerson('');
+        assert.strictEqual(db.getKnownPersons().length, 0);
+    });
+
+    test('known tags are seeded from existing issue tags on load', async () => {
+        // Dispose, create a new db with pre-seeded issues
+        db.dispose();
+        const storage2 = new MemoryStorageProvider();
+        const db2 = new IssueDatabase(storage2);
+        await db2.load();
+        await db2.createIssue({ ...makeIssuePart(), tags: ['seeded-tag', 'another'] });
+        db2.dispose();
+
+        // Re-load from same storage — knownTags should be seeded from issues
+        const db3 = new IssueDatabase(storage2);
+        await db3.load();
+        const tags = db3.getKnownTags();
+        assert.ok(tags.includes('seeded-tag'), 'seeded-tag should be in knownTags');
+        assert.ok(tags.includes('another'), 'another should be in knownTags');
+        db3.dispose();
+    });
+
+    test('known persons are seeded from existing issue reporters and assignees on load', async () => {
+        db.dispose();
+        const storage2 = new MemoryStorageProvider();
+        const db2 = new IssueDatabase(storage2);
+        await db2.load();
+        await db2.createIssue({ ...makeIssuePart(), reportedBy: 'reporter1', assignedTo: 'assignee1' });
+        db2.dispose();
+
+        const db3 = new IssueDatabase(storage2);
+        await db3.load();
+        const persons = db3.getKnownPersons();
+        assert.ok(persons.includes('reporter1'));
+        assert.ok(persons.includes('assignee1'));
+        db3.dispose();
+    });
+
+    test('ensureLoaded throws when load() has not been called', () => {
+        const rawDb = new IssueDatabase(new MemoryStorageProvider());
+        // Call any public write method before load() — should throw
+        assert.throws(() => (rawDb as any).ensureLoaded(), /must be awaited/i);
     });
 });

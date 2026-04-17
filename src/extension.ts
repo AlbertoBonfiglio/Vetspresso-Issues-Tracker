@@ -57,6 +57,8 @@ import {
     cmdCreateSprint,
     cmdEditSprint,
     cmdDeleteSprint,
+    cmdAssignSprint,
+    cmdAssignMilestone,
 } from './commands/milestoneCommands';
 import {
     cmdExportIssues,
@@ -191,6 +193,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     reg('vetspresso-issues.editIssue', (issue: unknown) => {
         if (isIssue(issue)) { return cmdEditIssue(issueService, extensionUri, issue); }
         if (issue instanceof IssueTreeItem) { return cmdEditIssue(issueService, extensionUri, issue.issue); }
+        return undefined;
     });
     reg('vetspresso-issues.viewIssue', (issue: unknown) => {
         if (isIssue(issue) || hasId(issue)) { return cmdViewIssue(issueService, extensionUri, issue as Issue); }
@@ -199,36 +202,44 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     reg('vetspresso-issues.deleteIssue', (issue: unknown) => {
         if (isIssue(issue)) { return cmdDeleteIssue(issueService, issue); }
         if (issue instanceof IssueTreeItem) { return cmdDeleteIssue(issueService, issue.issue); }
+        return undefined;
     });
     reg('vetspresso-issues.closeIssue', (issue: unknown) => {
         if (isIssue(issue)) { return cmdCloseIssue(issueService, issue); }
         if (issue instanceof IssueTreeItem) { return cmdCloseIssue(issueService, issue.issue); }
+        return undefined;
     });
     reg('vetspresso-issues.resolveIssue', (issue: unknown) => {
         if (isIssue(issue)) { return cmdResolveIssue(issueService, issue); }
         if (issue instanceof IssueTreeItem) { return cmdResolveIssue(issueService, issue.issue); }
+        return undefined;
     });
     reg('vetspresso-issues.reopenIssue', (issue: unknown) => {
         if (isIssue(issue)) { return cmdReopenIssue(issueService, issue); }
         if (issue instanceof IssueTreeItem) { return cmdReopenIssue(issueService, issue.issue); }
+        return undefined;
     });
     reg('vetspresso-issues.copyIssueId', (issue: unknown) => {
         if (isIssue(issue)) { return cmdCopyIssueId(issue); }
         if (issue instanceof IssueTreeItem) { return cmdCopyIssueId(issue.issue); }
+        return undefined;
     });
     reg('vetspresso-issues.logTime', (issue: unknown) => {
         if (isIssue(issue)) { return cmdLogTime(issueService, issue); }
         if (issue instanceof IssueTreeItem) { return cmdLogTime(issueService, issue.issue); }
+        return undefined;
     });
     reg('vetspresso-issues.addRelation', (issue: unknown) => {
         if (isIssue(issue)) { return cmdAddRelation(issueService, searchService, issue); }
         if (issue instanceof IssueTreeItem) { return cmdAddRelation(issueService, searchService, issue.issue); }
+        return undefined;
     });
     reg('vetspresso-issues.addComment', (issue: unknown) => {
         const resolved = isIssue(issue) ? issue : issue instanceof IssueTreeItem ? issue.issue : null;
         if (!resolved) { return; }
         return vscode.window.showInputBox({ title: 'Add Comment', prompt: 'Comment text' }).then((body) => {
             if (body?.trim()) { return issueService.addComment(resolved.id, body.trim()); }
+            return undefined;
         });
     });
 
@@ -274,10 +285,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     reg('vetspresso-issues.editMilestone', (item: unknown) => {
         const m = isMilestoneItem(item) ? item.milestone : undefined;
         if (m) { return cmdEditMilestone(issueService, m); }
+        return undefined;
     });
     reg('vetspresso-issues.deleteMilestone', (item: unknown) => {
         const m = isMilestoneItem(item) ? item.milestone : undefined;
         if (m) { return cmdDeleteMilestone(issueService, m); }
+        return undefined;
     });
 
     // Sprints
@@ -285,10 +298,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     reg('vetspresso-issues.editSprint', (item: unknown) => {
         const s = isSprintItem(item) ? item.sprint : undefined;
         if (s) { return cmdEditSprint(issueService, s); }
+        return undefined;
     });
     reg('vetspresso-issues.deleteSprint', (item: unknown) => {
         const s = isSprintItem(item) ? item.sprint : undefined;
         if (s) { return cmdDeleteSprint(issueService, s); }
+        return undefined;
+    });
+    reg('vetspresso-issues.assignSprint', (issue: unknown) => {
+        if (isIssue(issue)) { return cmdAssignSprint(issueService, issue); }
+        if (issue instanceof IssueTreeItem) { return cmdAssignSprint(issueService, issue.issue); }
+        return undefined;
+    });
+    reg('vetspresso-issues.assignMilestone', (issue: unknown) => {
+        if (isIssue(issue)) { return cmdAssignMilestone(issueService, issue); }
+        if (issue instanceof IssueTreeItem) { return cmdAssignMilestone(issueService, issue.issue); }
+        return undefined;
     });
 
     // Export / Import / Changelog

@@ -28,7 +28,7 @@ export class DashboardPanel {
     }
 
     private constructor(
-        private readonly extensionUri: vscode.Uri,
+        extensionUri: vscode.Uri,
         private readonly service: IssueService
     ) {
         this.panel = vscode.window.createWebviewPanel(

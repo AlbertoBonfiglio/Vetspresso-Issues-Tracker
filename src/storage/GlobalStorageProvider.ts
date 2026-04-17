@@ -23,6 +23,8 @@ import {
     MILESTONES_FILENAME,
     SPRINTS_FILENAME,
     TEMPLATES_FILENAME,
+    KNOWN_TAGS_FILENAME,
+    KNOWN_PERSONS_FILENAME,
 } from '../constants';
 import * as logger from '../utils/logger';
 import { nowIso } from '../utils/idGenerator';
@@ -34,6 +36,8 @@ export class GlobalStorageProvider implements IStorageProvider {
     private readonly milestonesUri: vscode.Uri;
     private readonly sprintsUri: vscode.Uri;
     private readonly templatesUri: vscode.Uri;
+    private readonly knownTagsUri: vscode.Uri;
+    private readonly knownPersonsUri: vscode.Uri;
 
     readonly label: string;
 
@@ -53,6 +57,8 @@ export class GlobalStorageProvider implements IStorageProvider {
         this.milestonesUri = vscode.Uri.joinPath(this.rootUri, MILESTONES_FILENAME);
         this.sprintsUri = vscode.Uri.joinPath(this.rootUri, SPRINTS_FILENAME);
         this.templatesUri = vscode.Uri.joinPath(this.rootUri, TEMPLATES_FILENAME);
+        this.knownTagsUri = vscode.Uri.joinPath(this.rootUri, KNOWN_TAGS_FILENAME);
+        this.knownPersonsUri = vscode.Uri.joinPath(this.rootUri, KNOWN_PERSONS_FILENAME);
         this.label = `global storage (namespace: ${safeName})`;
     }
 
@@ -181,6 +187,40 @@ export class GlobalStorageProvider implements IStorageProvider {
 
     async writeTemplates(templates: IssueTemplate[]): Promise<void> {
         await this.writeJson(this.templatesUri, templates);
+    }
+
+    // ------- Known Tags -------
+
+    async readKnownTags(): Promise<string[]> {
+        try {
+            return await this.readJson<string[]>(this.knownTagsUri);
+        } catch (err) {
+            if (isNotFound(err)) {
+                return [];
+            }
+            throw err;
+        }
+    }
+
+    async writeKnownTags(tags: string[]): Promise<void> {
+        await this.writeJson(this.knownTagsUri, tags);
+    }
+
+    // ------- Known Persons -------
+
+    async readKnownPersons(): Promise<string[]> {
+        try {
+            return await this.readJson<string[]>(this.knownPersonsUri);
+        } catch (err) {
+            if (isNotFound(err)) {
+                return [];
+            }
+            throw err;
+        }
+    }
+
+    async writeKnownPersons(persons: string[]): Promise<void> {
+        await this.writeJson(this.knownPersonsUri, persons);
     }
 
     // ------- Accessors -------

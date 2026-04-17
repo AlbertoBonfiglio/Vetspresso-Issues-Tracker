@@ -9,7 +9,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-*No unreleased changes yet.*
+### Fixed
+
+- **Issue detail panel — buttons and inputs were silently no-ops.** Inline event handlers (`onclick`, `onchange`, `onblur`) are blocked by VS Code's Content Security Policy when a nonce is present. All event bindings have been moved into the nonce-protected `<script>` block using `addEventListener`. Affected controls: status dropdown, assignee input, Save Description button, Add Comment button, Log Time button, Edit button, Copy ID button.
+
+### Added
+
+- **Inline description editing** in the issue detail panel: description is now an editable textarea with a "Save Description" button.
+- **Sprint and Milestone dropdowns** in the issue detail panel: both fields can now be changed directly from the panel without going through the Edit command.
+- **"Assign to Sprint" command** (`vetspresso-issues.assignSprint`): right-click any issue in the Issues tree to assign or remove its sprint via a quick-pick list.
+- **"Assign to Milestone" command** (`vetspresso-issues.assignMilestone`): right-click any issue in the Issues tree to assign or remove its milestone via a quick-pick list.
+- **Sprint edit now includes description**: `cmdEditSprint` prompts for the sprint goal/description in addition to name and status.
+- **Issue edit now includes description**: `cmdEditIssue` prompts for the description in addition to title, status, and assignee.
+- Toast notifications in the issue detail panel for all save actions.
+- **Editable version fields in the issue detail panel**: "Reported in", "Target version", and "Fixed in" are now text inputs that save on blur, instead of read-only labels.
+- **Version fields in `cmdEditIssue`**: editing an issue via the Edit command now prompts for "Reported In", "Target Version", and "Fixed In". When git tags are available they are offered as a quick-pick; otherwise a free-text input is shown. Leaving blank clears the field.
+- **Known tags system**: a persistent list of previously-used tags is now maintained in `known-tags.json` alongside issue data. Tags are automatically seeded from existing issues on first load for backward-compatibility. Subsequent creates and edits register new tags.
+- **Known persons system**: a persistent list of previously-used person names (reporters and assignees) is now maintained in `known-persons.json`. Names are seeded from existing issues on first load and auto-registered on every create/update.
+- **Inline tag editor in the issue detail panel**: tags are shown as removable chips (×). A text input with datalist autocomplete lets you pick from known tags or type a new one. Typing an unknown tag prompts inline *"Save as a new known tag?"* — confirm to persist it, cancel to discard.
+- **Inline Reported by / Assigned to editing in the issue detail panel**: both fields are now text inputs with datalist autocomplete from the known-persons list. Editing to an unknown name prompts inline *"Save as a known person for future use?"* before persisting.
+- **Assignee and tag prompts in `cmdCreateIssue`**: new issue wizard now includes an Assignee step (quick-pick from known persons + "Enter name…" option) and a Tags step (multi-select from known tags + "Add custom tag…" option).
+- **Tag editing in `cmdEditIssue`**: the Edit Issue command now includes a Tags step with multi-select from known tags and a custom-tag entry option. Custom tags entered here are immediately registered in the known-tags list.
 
 ---
 

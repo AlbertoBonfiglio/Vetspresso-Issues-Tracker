@@ -17,6 +17,15 @@ import {
     totalLoggedHours,
     compareSeverity,
     compareById,
+    debounce,
+    iconForType,
+    iconForStatus,
+    colorForSeverity,
+    labelForGroupBy,
+    statusLabel,
+    generateNonce,
+    compareUrgency,
+    compareByDate,
 } from '../../src/utils/helpers';
 import { generateId, nowIso, todayIso } from '../../src/utils/idGenerator';
 import { Issue } from '../../src/types';
@@ -168,5 +177,202 @@ describe('helpers — issue logic', () => {
         const first = makeIssue({ sequentialId: 1 });
         const second = makeIssue({ sequentialId: 2 });
         assert.ok(compareById(first, second) < 0);
+    });
+});
+
+describe('helpers — debounce', () => {
+    test('debounce delays execution', async () => {
+        let calls = 0;
+        const debounced = debounce(() => { calls++; }, 20);
+        debounced();
+        debounced();
+        debounced();
+        assert.strictEqual(calls, 0);
+        await new Promise((r) => setTimeout(r, 40));
+        assert.strictEqual(calls, 1);
+    });
+
+    test('debounce resets timer on each call', async () => {
+        let calls = 0;
+        const debounced = debounce(() => { calls++; }, 30);
+        debounced();
+        await new Promise((r) => setTimeout(r, 10));
+        debounced(); // resets timer
+        await new Promise((r) => setTimeout(r, 10));
+        assert.strictEqual(calls, 0); // still not fired
+        await new Promise((r) => setTimeout(r, 40));
+        assert.strictEqual(calls, 1);
+    });
+});
+
+describe('helpers — relativeTime all branches', () => {
+    const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+    const inFuture = (ms: number) => new Date(Date.now() + ms).toISOString();
+
+    test('minutes singular', () => {
+        assert.ok(relativeTime(ago(65_000)).includes('minute'));
+        assert.ok(!relativeTime(ago(65_000)).includes('minutes'));
+    });
+
+    test('minutes plural', () => {
+        assert.ok(relativeTime(ago(3 * 60_000)).includes('minutes'));
+    });
+
+    test('hours singular', () => {
+        assert.ok(relativeTime(ago(65 * 60_000)).includes('hour'));
+        assert.ok(!relativeTime(ago(65 * 60_000)).includes('hours'));
+    });
+
+    test('hours plural', () => {
+        assert.ok(relativeTime(ago(3 * 3_600_000)).includes('hours'));
+    });
+
+    test('weeks', () => {
+        assert.ok(relativeTime(ago(8 * 24 * 3_600_000)).includes('week'));
+    });
+
+    test('months', () => {
+        assert.ok(relativeTime(ago(35 * 24 * 3_600_000)).includes('month'));
+    });
+
+    test('years', () => {
+        assert.ok(relativeTime(ago(400 * 24 * 3_600_000)).includes('year'));
+    });
+
+    test('future date uses "in X" prefix', () => {
+        const label = relativeTime(inFuture(3 * 3_600_000));
+        assert.ok(label.startsWith('in '), `Expected "in ...", got "${label}"`);
+    });
+});
+
+describe('helpers — icon / colour / label helpers', () => {
+    const issueTypes = ['bug', 'enhancement', 'feature', 'task', 'question', 'documentation', 'other'] as const;
+    const statuses = ['open', 'in-progress', 'in-review', 'resolved', 'closed', 'wontfix', 'duplicate'] as const;
+    const severities = ['critical', 'high', 'medium', 'low', 'trivial'] as const;
+    const groupBys = ['type', 'status', 'severity', 'milestone', 'sprint', 'assignee', 'none'] as const;
+
+    test('iconForType returns a non-empty string for every issue type', () => {
+        for (const t of issueTypes) {
+            const icon = iconForType(t);
+            assert.ok(icon.length > 0, `iconForType("${t}") returned empty`);
+        }
+    });
+
+    test('iconForStatus returns a non-empty string for every status', () => {
+        for (const s of statuses) {
+            const icon = iconForStatus(s);
+            assert.ok(icon.length > 0, `iconForStatus("${s}") returned empty`);
+        }
+    });
+
+    test('colorForSeverity returns a non-empty string for every severity', () => {
+        for (const s of severities) {
+            const color = colorForSeverity(s);
+            assert.ok(color.length > 0, `colorForSeverity("${s}") returned empty`);
+        }
+    });
+
+    test('labelForGroupBy returns a non-empty string for every GroupBy value', () => {
+        for (const g of groupBys) {
+            const label = labelForGroupBy(g);
+            assert.ok(label.length > 0, `labelForGroupBy("${g}") returned empty`);
+        }
+    });
+
+    test('statusLabel returns a non-empty string for every status', () => {
+        for (const s of statuses) {
+            const label = statusLabel(s);
+            assert.ok(label.length > 0, `statusLabel("${s}") returned empty`);
+        }
+    });
+
+    test('statusLabel specific values', () => {
+        assert.strictEqual(statusLabel('open'), 'Open');
+        assert.strictEqual(statusLabel('in-progress'), 'In Progress');
+        assert.strictEqual(statusLabel('wontfix'), "Won't Fix");
+    });
+});
+
+describe('helpers — isDone edge cases', () => {
+    const makeIssue = (status: import('../../src/types').IssueStatus): import('../../src/types').Issue => ({
+        id: 'x', sequentialId: 1, title: 't', description: '', type: 'bug',
+        status, severity: 'medium', urgency: 'normal',
+        reportedInVersion: null, fixedInVersion: null, targetVersion: null,
+        milestoneId: null, sprintId: null, tags: [], estimatedHours: null,
+        timeEntries: [], reportedBy: 'a', assignedTo: null, createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(), resolvedAt: null, codeLinks: [], relations: [],
+        comments: [], workspaceFolder: null, templateId: null,
+    });
+
+    test('isDone returns true for wontfix', () => {
+        assert.strictEqual(isDone(makeIssue('wontfix')), true);
+    });
+
+    test('isDone returns true for duplicate', () => {
+        assert.strictEqual(isDone(makeIssue('duplicate')), true);
+    });
+
+    test('isActive returns true for in-review', () => {
+        assert.strictEqual(isActive(makeIssue('in-review')), true);
+    });
+
+    test('isActive returns false for wontfix', () => {
+        assert.strictEqual(isActive(makeIssue('wontfix')), false);
+    });
+});
+
+describe('helpers — sorting (compareUrgency, compareByDate, compareSeverity full)', () => {
+    const makeIssue = (overrides: Partial<import('../../src/types').Issue>): import('../../src/types').Issue => ({
+        id: 'x', sequentialId: 1, title: 't', description: '', type: 'bug',
+        status: 'open', severity: 'medium', urgency: 'normal',
+        reportedInVersion: null, fixedInVersion: null, targetVersion: null,
+        milestoneId: null, sprintId: null, tags: [], estimatedHours: null,
+        timeEntries: [], reportedBy: 'a', assignedTo: null, createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(), resolvedAt: null, codeLinks: [], relations: [],
+        comments: [], workspaceFolder: null, templateId: null,
+        ...overrides,
+    });
+
+    test('compareUrgency sorts immediate before normal', () => {
+        const a = makeIssue({ urgency: 'immediate' });
+        const b = makeIssue({ urgency: 'normal' });
+        assert.ok(compareUrgency(a, b) < 0);
+    });
+
+    test('compareUrgency equal urgency returns 0', () => {
+        const a = makeIssue({ urgency: 'high' });
+        const b = makeIssue({ urgency: 'high' });
+        assert.strictEqual(compareUrgency(a, b), 0);
+    });
+
+    test('compareByDate sorts newest first', () => {
+        const older = makeIssue({ createdAt: new Date(Date.now() - 1_000_000).toISOString() });
+        const newer = makeIssue({ createdAt: new Date().toISOString() });
+        assert.ok(compareByDate(newer, older) < 0, 'Newer should come first (negative result)');
+    });
+
+    test('compareSeverity equal severity returns 0', () => {
+        const a = makeIssue({ severity: 'medium' });
+        const b = makeIssue({ severity: 'medium' });
+        assert.strictEqual(compareSeverity(a, b), 0);
+    });
+
+    test('compareSeverity low after high', () => {
+        const h = makeIssue({ severity: 'high' });
+        const l = makeIssue({ severity: 'low' });
+        assert.ok(compareSeverity(h, l) < 0);
+    });
+});
+
+describe('helpers — generateNonce', () => {
+    test('generateNonce returns a non-empty base64 string', () => {
+        const nonce = generateNonce();
+        assert.ok(nonce.length > 0);
+        assert.match(nonce, /^[A-Za-z0-9+/=]+$/);
+    });
+
+    test('generateNonce returns unique values', () => {
+        const nonces = new Set(Array.from({ length: 100 }, generateNonce));
+        assert.strictEqual(nonces.size, 100);
     });
 });

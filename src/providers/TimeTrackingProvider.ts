@@ -78,7 +78,7 @@ class IssueTimeItem extends vscode.TreeItem {
 class TimeEntryItem extends vscode.TreeItem {
     constructor(entry: TimeEntry) {
         super(`${shortDate(entry.date)} — ${entry.hours.toFixed(1)}h`);
-        this.description = entry.description || undefined;
+        this.description = entry.description || false;
         this.tooltip = new vscode.MarkdownString(
             `**${entry.author}** on ${shortDate(entry.date)}\n\n**${entry.hours.toFixed(1)} hours**\n\n${entry.description}`
         );

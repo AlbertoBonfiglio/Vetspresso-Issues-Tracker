@@ -41,6 +41,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
+
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
@@ -292,6 +293,18 @@
         "title": "Group Issues By...",
         "category": "Issues",
         "icon": "$(list-ordered)"
+      },
+      {
+        "command": "vetspresso-issues.assignSprint",
+        "title": "Assign to Sprint",
+        "category": "Issues",
+        "icon": "$(sync)"
+      },
+      {
+        "command": "vetspresso-issues.assignMilestone",
+        "title": "Assign to Milestone",
+        "category": "Issues",
+        "icon": "$(milestone)"
       }
     ],
     "menus": {
@@ -413,6 +426,16 @@
           "command": "vetspresso-issues.deleteIssue",
           "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
           "group": "4_delete"
+        },
+        {
+          "command": "vetspresso-issues.assignSprint",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "1_modify@5"
+        },
+        {
+          "command": "vetspresso-issues.assignMilestone",
+          "when": "view == vetspresso-issues.issueExplorer && viewItem == issue",
+          "group": "1_modify@6"
         },
         {
           "command": "vetspresso-issues.editMilestone",

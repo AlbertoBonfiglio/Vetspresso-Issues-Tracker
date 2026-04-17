@@ -37,6 +37,10 @@ class MemStub implements IStorageProvider {
     async readSprints() { return this.sprints; }
     async writeSprints(ss: Sprint[]) { this.sprints = ss; }
     async readTemplates() { return this.templates; }
+    async readKnownTags() { return []; }
+    async writeKnownTags() { }
+    async readKnownPersons() { return []; }
+    async writeKnownPersons() { }
     async writeTemplates(ts: IssueTemplate[]) { this.templates = ts; }
     getRootUri() { return this.uri; }
 }

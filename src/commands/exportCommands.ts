@@ -72,10 +72,11 @@ export async function cmdGenerateChangelog(
         placeHolder: 'e.g. v1.4.0',
     });
 
+    const versionOpt = versionFilter ? { version: versionFilter } : {};
     const content =
         formatChoice.label === 'markdown'
-            ? changelogService.renderMarkdown({ version: versionFilter || undefined })
-            : changelogService.renderPlainText({ version: versionFilter || undefined });
+            ? changelogService.renderMarkdown(versionOpt)
+            : changelogService.renderPlainText(versionOpt);
 
     // Open in a new untitled document
     const doc = await vscode.workspace.openTextDocument({

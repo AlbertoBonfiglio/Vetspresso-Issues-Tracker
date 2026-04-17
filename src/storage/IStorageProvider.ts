@@ -75,6 +75,22 @@ export interface IStorageProvider {
     /** Persists the entire templates collection. */
     writeTemplates(templates: IssueTemplate[]): Promise<void>;
 
+    // ------- Known Tags -------
+
+    /** Reads the list of known/previously-used tags. */
+    readKnownTags(): Promise<string[]>;
+
+    /** Persists the known-tags list. */
+    writeKnownTags(tags: string[]): Promise<void>;
+
+    // ------- Known Persons -------
+
+    /** Reads the list of known/previously-used person names (reporters & assignees). */
+    readKnownPersons(): Promise<string[]>;
+
+    /** Persists the known-persons list. */
+    writeKnownPersons(persons: string[]): Promise<void>;
+
     /**
      * Returns a URI to the root storage directory, useful for "reveal in explorer"
      * or diagnostic display.  May return `null` for in-memory / opaque backends.

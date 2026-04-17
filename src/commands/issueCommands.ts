@@ -72,7 +72,51 @@ export async function cmdCreateIssue(
         value: initialData?.description ?? '',
     });
 
-    // 5. Target version (optional)
+    // 5. Assignee (optional, with known persons)
+    const knownPersons: string[] = service.getKnownPersons();
+    let assignee: string | undefined;
+    if (knownPersons.length > 0) {
+        const personChoice = await vscode.window.showQuickPick(
+            [{ label: '(none)', description: 'Leave unassigned' }, ...knownPersons.map((p) => ({ label: p })), { label: '$(pencil) Enter name…', description: 'Type a new assignee' }],
+            { title: 'New Issue — Assignee (optional)', placeHolder: 'Select or type an assignee' }
+        );
+        if (personChoice === undefined) { return; }
+        if (personChoice.label === '$(pencil) Enter name…') {
+            const typed = await vscode.window.showInputBox({ title: 'New Issue — Assignee', prompt: 'Enter assignee name' });
+            if (typed === undefined) { return; }
+            assignee = typed.trim() || undefined;
+        } else if (personChoice.label !== '(none)') {
+            assignee = personChoice.label;
+        }
+    } else {
+        const typed = await vscode.window.showInputBox({
+            title: 'New Issue — Assignee (optional)',
+            prompt: 'Enter assignee name, or leave blank.',
+        });
+        if (typed === undefined) { return; }
+        assignee = typed.trim() || undefined;
+    }
+
+    // 6. Tags (optional, with known tags)
+    const knownTags = service.getKnownTags();
+    let chosenTags: string[] = [...(initialData?.tags ?? [])];
+    if (knownTags.length > 0) {
+        const tagPicks = await vscode.window.showQuickPick(
+            [...knownTags.map((t) => ({ label: t, picked: chosenTags.includes(t) })), { label: '$(pencil) Add custom tag…', description: 'Type a new tag', picked: false }],
+            { title: 'New Issue — Tags (optional)', placeHolder: 'Select tags', canPickMany: true }
+        );
+        if (tagPicks === undefined) { return; }
+        const wantsCustom = tagPicks.some((p) => p.label === '$(pencil) Add custom tag…');
+        chosenTags = tagPicks.filter((p) => p.label !== '$(pencil) Add custom tag…').map((p) => p.label);
+        if (wantsCustom) {
+            const custom = await vscode.window.showInputBox({ title: 'New Issue — Custom Tags', prompt: 'Enter tags separated by commas' });
+            if (custom === undefined) { return; }
+            const extra = custom.split(',').map((t) => t.trim()).filter(Boolean);
+            chosenTags = [...new Set([...chosenTags, ...extra])];
+        }
+    }
+
+    // 7. Target version (optional)
     const folderUri = vscode.workspace.workspaceFolders?.[0]?.uri;
     let targetVersion: string | undefined;
     if (folderUri) {
@@ -95,6 +139,8 @@ export async function cmdCreateIssue(
             type: typeChoice.label,
             severity: severityChoice.label,
             targetVersion: targetVersion ?? null,
+            assignedTo: assignee ?? null,
+            tags: chosenTags,
             templateId: templateId ?? null,
             ...initialData,
         });
@@ -141,7 +187,7 @@ export async function cmdCreateFromTemplate(
 
 export async function cmdEditIssue(
     service: IssueService,
-    extensionUri: vscode.Uri,
+    _extensionUri: vscode.Uri,
     issue: Issue
 ): Promise<void> {
     const newTitle = await vscode.window.showInputBox({
@@ -164,12 +210,98 @@ export async function cmdEditIssue(
         prompt: 'Leave blank to unassign.',
     });
 
+    const newDescription = await vscode.window.showInputBox({
+        title: `Edit Issue #${issue.sequentialId} — Description`,
+        value: issue.description ?? '',
+        prompt: 'Issue description (optional).',
+    });
+
+    // Version fields — offer quick-pick from git tags if available, else free text
+    const folderUri = vscode.workspace.workspaceFolders?.[0]?.uri;
+    const versions = folderUri ? await getAllVersions(folderUri) : [];
+    const versionItems = (current: string | null) => [
+        { label: '(none)', description: 'Clear version' },
+        ...(current && !versions.find((v) => v.version === current)
+            ? [{ label: current, description: 'current value' }]
+            : []),
+        ...versions.map((v) => ({ label: v.version, description: v.source })),
+    ];
+
+    const pickVersion = async (title: string, current: string | null): Promise<string | null | undefined> => {
+        if (versions.length > 0) {
+            const choice = await vscode.window.showQuickPick(
+                versionItems(current).map((item) => ({ ...item, picked: item.label === (current ?? '(none)') })),
+                { title, placeHolder: 'Select a version or (none) to clear' }
+            );
+            if (choice === undefined) { return undefined; } // cancelled
+            return choice.label === '(none)' ? null : choice.label;
+        }
+        // No git versions available — fall back to free text
+        const val = await vscode.window.showInputBox({
+            title,
+            value: current ?? '',
+            prompt: 'Enter version string, or leave blank to clear.',
+        });
+        if (val === undefined) { return undefined; } // cancelled
+        return val.trim() || null;
+    };
+
+    const newReportedIn = await pickVersion(
+        `Edit Issue #${issue.sequentialId} — Reported In Version`, issue.reportedInVersion
+    );
+    if (newReportedIn === undefined) { return; }
+
+    const newTargetVersion = await pickVersion(
+        `Edit Issue #${issue.sequentialId} — Target Version`, issue.targetVersion
+    );
+    if (newTargetVersion === undefined) { return; }
+
+    const newFixedIn = await pickVersion(
+        `Edit Issue #${issue.sequentialId} — Fixed In Version`, issue.fixedInVersion
+    );
+    if (newFixedIn === undefined) { return; }
+
+    // Tags — multi-select from known tags + custom entry
+    const knownTags = service.getKnownTags();
+    let updatedTags: string[] = [...issue.tags];
+    const tagPickItems = [
+        ...knownTags.map((t) => ({ label: t, picked: issue.tags.includes(t) })),
+        { label: '$(pencil) Add custom tag…', description: 'Type a new tag', picked: false },
+    ];
+    const tagPicks = await vscode.window.showQuickPick(tagPickItems, {
+        title: `Edit Issue #${issue.sequentialId} — Tags`,
+        placeHolder: 'Select tags (space to toggle)',
+        canPickMany: true,
+    });
+    if (tagPicks === undefined) { return; }
+    const wantsCustomTag = tagPicks.some((p) => p.label === '$(pencil) Add custom tag…');
+    updatedTags = tagPicks.filter((p) => p.label !== '$(pencil) Add custom tag…').map((p) => p.label);
+    // Include any existing tags not in knownTags (keep them unless explicitly deselected)
+    for (const t of issue.tags) {
+        if (!knownTags.includes(t) && !updatedTags.includes(t)) {
+            updatedTags.push(t);
+        }
+    }
+    if (wantsCustomTag) {
+        const custom = await vscode.window.showInputBox({ title: 'Edit Issue — Custom Tags', prompt: 'Enter tags separated by commas' });
+        if (custom === undefined) { return; }
+        const extra = custom.split(',').map((t) => t.trim()).filter(Boolean);
+        updatedTags = [...new Set([...updatedTags, ...extra])];
+        await Promise.all(extra.map((t) => service.addKnownTag(t)));
+    }
+
     try {
         await service.updateIssue(issue.id, {
             title: newTitle.trim(),
             status: statusChoice.label,
             assignedTo: newAssignee?.trim() || null,
+            description: newDescription ?? issue.description ?? '',
+            reportedInVersion: newReportedIn,
+            targetVersion: newTargetVersion,
+            fixedInVersion: newFixedIn,
+            tags: updatedTags,
         });
+        if (newAssignee?.trim()) { await service.addKnownPerson(newAssignee.trim()); }
     } catch (err) {
         logger.showError('Failed to update issue', err);
     }

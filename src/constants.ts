@@ -31,6 +31,12 @@ export const SPRINTS_FILENAME = 'sprints.json';
 /** Filename for issue-template data. */
 export const TEMPLATES_FILENAME = 'templates.json';
 
+/** Filename for the list of known/previously-used tags. */
+export const KNOWN_TAGS_FILENAME = 'known-tags.json';
+
+/** Filename for the list of known/previously-used person names. */
+export const KNOWN_PERSONS_FILENAME = 'known-persons.json';
+
 /** View container IDs */
 export const VIEW_CONTAINER_ID = `${EXTENSION_ID}-container`;
 

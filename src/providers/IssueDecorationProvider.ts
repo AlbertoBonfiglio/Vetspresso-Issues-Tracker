@@ -32,7 +32,7 @@ export class IssueDecorationProvider {
 
     constructor(private readonly service: IssueService) {
         this.debouncedUpdate = debounce(
-            (editor: vscode.TextEditor) => this.applyDecorations(editor),
+            (...args: unknown[]) => this.applyDecorations(args[0] as vscode.TextEditor),
             DECORATION_DEBOUNCE_MS
         ) as (editor: vscode.TextEditor) => void;
 
