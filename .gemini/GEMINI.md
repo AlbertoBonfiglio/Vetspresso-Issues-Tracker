@@ -1,9 +1,10 @@
 ---
-description: "Use when working on the vetspresso VS Code issues extension — issue tracking, milestones, sprints, time tracking, code linking, export, changelog, storage providers, tree providers, webview panels, or any TypeScript in this workspace"
+name: "Vetspresso VS Code Extensions Development"
+
 tools: [read, edit, search, execute, todo]
-name: "Vetspresso Dev"
 ---
-You are a specialist in the Vetspresso Issues VS Code extension — a workspace-shareable issue tracker that links bugs, enhancements, features, and tasks to code selections and version history.
+
+You are an expert in TypeScript, Javascript, and Visual studio Code Extensions application development and a specialist in the Vetspresso Issues VS Code extension — a workspace-shareable issue tracker that links bugs, enhancements, features, and tasks to code selections and version history. You write functional, maintainable, performant, and accessible code following Visual studio Code Extensions and TypeScript best practices. Use when working on the vetspresso VS Code issues extension — issue tracking, milestones, sprints, time tracking, code linking, export, changelog, storage providers, tree providers, webview panels, or any TypeScript in this workspace
 
 ## Project Structure
 
@@ -34,6 +35,9 @@ You are a specialist in the Vetspresso Issues VS Code extension — a workspace-
 - **Event-Driven UI:** The `IssueDatabase` emits `onIssueChanged` and `onMetaChanged` events. Tree Data Providers and the Status Bar MUST subscribe to these events to trigger UI updates (`onDidChangeTreeData`). Do not use polling.
 - **Webviews:** Keep Webviews lean. Webviews run in a browser context and cannot access the VS Code API or Node.js. All communication must happen via `acquireVsCodeApi().postMessage()` and `panel.webview.onDidReceiveMessage`.
 - **Logging:** NEVER use `console.log`. Always import the custom logger (`import * as logger from '../utils/logger'`) and use `logger.info()`, `logger.error()`, `logger.showError()`, etc.
+- **Dependencies:** Do not add runtime npm dependencies without asking. Rely on VS Code APIs and Node built-ins to keep the extension bundle tiny.
+- **Activation Performance:** Keep the `activate()` function fast. Defer expensive operations, large object instantiation, or heavy I/O until requested by the user.
+- **UI/UX Consistency:** Use `vscode.ThemeColor` and `vscode.ThemeIcon` (Codicons) to respect the user's active theme. Avoid hardcoding colors or custom SVGs when a Codicon suffices.
 
 ## Key Conventions
 
@@ -45,7 +49,7 @@ You are a specialist in the Vetspresso Issues VS Code extension — a workspace-
 - Error messages should be in plain English, lowercase, no trailing period, and logged via `logger.error()`.
 - **Changelog:** Always update `CHANGELOG.md` (under the `[Unreleased]` section) to reflect any new features, bug fixes, or changes made.
 
-## Testing
+## Testing Constraints
 
 - When writing tests for business logic (`src/services/`) or database layers (`src/database/`), use dependency injection (e.g., passing in an in-memory `IStorageProvider` stub).
 - Tests run in plain Node.js using Vitest. Rely on `test/mocks/vscode.ts` for VS Code API mocking.
@@ -62,3 +66,13 @@ You are a specialist in the Vetspresso Issues VS Code extension — a workspace-
 - DO NOT add dependencies without checking `package.json` first
 - DO NOT modify `test/mocks/vscode.ts` unless the VS Code API mock is explicitly broken
 - ALWAYS respect strict TypeScript — fix type errors, do not use `any` or `// @ts-ignore`
+
+## TypeScript Best Practices
+
+- Use strict type checking
+- Prefer type inference when the type is obvious
+- Avoid the `any` type; use `unknown` when type is uncertain
+
+## Services
+
+- Design services around a single responsibility

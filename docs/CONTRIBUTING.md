@@ -76,9 +76,9 @@ vetspresso-issues/
 │       ├── milestoneCommands.ts  ← Milestone + sprint commands
 │       └── exportCommands.ts     ← Export, import, changelog commands
 ├── test/
-│   ├── runTests.ts               ← @vscode/test-electron runner
+│   ├── mocks/
+│   │   └── vscode.ts             ← VS Code API mock (runs in plain Node)
 │   └── suite/
-│       ├── index.ts              ← Mocha glob discoverer
 │       ├── helpers.test.ts       ← Utils / helpers unit tests
 │       ├── issueDatabase.test.ts ← Database layer tests (memory stub)
 │       ├── issueService.test.ts  ← Service layer tests
@@ -185,7 +185,7 @@ npm run compile
 npm test
 ```
 
-Tests run via `@vscode/test-electron`, which downloads a VS Code binary and runs Mocha in the Extension Host. They do not require an actual VS Code installation beyond what's downloaded automatically.
+Tests run via `vitest` in plain Node.js. They do not require spinning up a VS Code Extension Host. Instead, VS Code APIs are mocked via `test/mocks/vscode.ts` to ensure fast, isolated unit testing.
 
 ### Test strategy
 
@@ -205,7 +205,7 @@ All tests use in-memory or temporary-directory stubs. No real git repository or 
 ### Adding Tests
 
 1. Create a new file in `test/suite/` matching the `*.test.ts` glob
-2. Export a Mocha `suite()` (TDD interface — `suite`, `test`, `setup`, `teardown`)
+2. Write tests using the `vitest` framework (e.g., `describe`, `test`, `beforeEach`)
 3. Import from `../../src/...` as needed
 
 ---

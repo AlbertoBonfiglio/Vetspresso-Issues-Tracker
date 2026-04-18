@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **Developer Experience**: Synchronized and updated AI agent configurations (`.gemini/GEMINI.md` and `.github/agents/vetspresso-dev.agent.md`) and `CONTRIBUTING.md` to accurately reflect the use of Vitest, extensionless imports, and the `IssueDatabase` event-driven UI architecture. Added strict rules for maintaining 80% test coverage, UI/UX consistency, and extension activation performance.
+
 ### Fixed
 
 - **Issue detail panel — buttons and inputs were silently no-ops.** Inline event handlers (`onclick`, `onchange`, `onblur`) are blocked by VS Code's Content Security Policy when a nonce is present. All event bindings have been moved into the nonce-protected `<script>` block using `addEventListener`. Affected controls: status dropdown, assignee input, Save Description button, Add Comment button, Log Time button, Edit button, Copy ID button.
