@@ -134,6 +134,24 @@ export interface IssueComment {
     updatedAt: string;
 }
 
+/**
+ * A file attached to an issue, such as a screenshot or log file.
+ */
+export interface Attachment {
+    /** Unique identifier (UUID v4). */
+    id: string;
+    /** Original filename of the attachment. */
+    filename: string;
+    /** Mime type of the file. */
+    mimetype: string;
+    /** Size of the file in bytes. */
+    size: number;
+    /** When this attachment was created (ISO 8601 datetime). */
+    createdAt: string;
+    /** Author who uploaded it. */
+    author: string;
+}
+
 // ---------------------------------------------------------------------------
 // Primary entities
 // ---------------------------------------------------------------------------
@@ -205,6 +223,8 @@ export interface Issue {
     relations: IssueRelation[];
     /** Comments and discussion. */
     comments: IssueComment[];
+    /** Attached files (screenshots, logs, etc.). */
+    attachments?: Attachment[];
 
     // Metadata
     /** Workspace folder name (null = store-level or single-root). */

@@ -18,6 +18,7 @@ import {
     Sprint,
     IssueTemplate,
     IssueStoreIndex,
+    Attachment,
 } from '../types';
 import { generateId, nowIso } from '../utils/idGenerator';
 import { SCHEMA_VERSION } from '../constants';
@@ -178,6 +179,10 @@ export class IssueDatabase {
             createdAt: now,
             updatedAt: now,
         };
+
+        if (!issue.attachments) {
+            issue.attachments = [];
+        }
 
         this.issueCache.set(id, issue);
         await this.storage.writeIssue(issue);
@@ -478,6 +483,9 @@ export class IssueDatabase {
         const issues = await this.storage.readAllIssues();
         this.issueCache.clear();
         for (const issue of issues) {
+            if (!issue.attachments) {
+                issue.attachments = [];
+            }
             this.issueCache.set(issue.id, issue);
         }
     }
