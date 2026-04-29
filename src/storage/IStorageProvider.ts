@@ -5,7 +5,7 @@
  * AGPL-3.0-only
  */
 
-import { IssueStoreIndex, Issue, Milestone, Sprint, IssueTemplate } from '../types';
+import type { IssueStoreIndex, Issue, Milestone, Sprint, IssueTemplate } from '../types';
 
 /**
  * Abstraction layer over where and how issue data is written to disk.

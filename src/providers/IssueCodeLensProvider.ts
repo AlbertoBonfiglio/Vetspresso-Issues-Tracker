@@ -8,9 +8,10 @@
 
 import * as vscode from 'vscode';
 import { IssueService } from '../services/IssueService';
-import { Issue } from '../types';
+import type { Issue } from '../types';
 import { CONFIG_SECTION, CFG_CODE_LENS_ENABLED } from '../constants';
 
+/** CodeLensProvider that renders issue-link annotations above linked code lines. */
 export class IssueCodeLensProvider implements vscode.CodeLensProvider {
     private readonly _onDidChangeCodeLenses = new vscode.EventEmitter<void>();
     readonly onDidChangeCodeLenses = this._onDidChangeCodeLenses.event;

@@ -13,6 +13,7 @@ import {
     STATUS_BAR_PRIORITY,
 } from '../constants';
 
+/** Manages the status bar item showing open/critical issue counts. */
 export class StatusBarProvider {
     private readonly item: vscode.StatusBarItem;
     private readonly disposables: vscode.Disposable[] = [];

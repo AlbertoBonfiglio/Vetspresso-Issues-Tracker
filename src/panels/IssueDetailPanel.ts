@@ -8,7 +8,7 @@
 
 import * as vscode from 'vscode';
 import { IssueService } from '../services/IssueService';
-import { Issue, IssueStatus } from '../types';
+import type { Issue, IssueStatus } from '../types';
 import { escapeHtml, generateNonce, relativeTime, totalLoggedHours } from '../utils/helpers';
 
 const PANEL_TYPE = 'vetspresso-issues.issueDetail';
@@ -18,6 +18,7 @@ interface WebviewMsg {
   [key: string]: unknown;
 }
 
+/** WebviewPanel showing full issue details with inline editing. */
 export class IssueDetailPanel {
   private static panels = new Map<string, IssueDetailPanel>();
   private readonly panel: vscode.WebviewPanel;
@@ -204,7 +205,7 @@ export class IssueDetailPanel {
     const currentTagsJson = JSON.stringify(i.tags);
 
     const statusOptions = (
-      ['open', 'in-progress', 'in-review', 'resolved', 'closed', 'wontfix', 'duplicate'] as IssueStatus[]
+      ['open', 'in-progress', 'in-review', 'on-hold', 'resolved', 'closed', 'wontfix', 'duplicate'] as IssueStatus[]
     ).map((s) => `<option value="${s}"${i.status === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('');
 
     const sprints = this.service.getSprints();

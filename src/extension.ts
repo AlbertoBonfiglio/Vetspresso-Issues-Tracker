@@ -69,12 +69,13 @@ import {
 import { MilestoneTreeItem } from './providers/MilestoneTreeProvider';
 import { SprintTreeItem } from './providers/SprintTreeProvider';
 import { IssueTreeItem } from './providers/IssueTreeProvider';
-import { Issue } from './types';
+import type { Issue } from './types';
 
 // ---------------------------------------------------------------------------
 // activate
 // ---------------------------------------------------------------------------
 
+/** Called by VS Code when the extension is activated. Bootstraps services, providers, and commands. */
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
     const channel = vscode.window.createOutputChannel(EXTENSION_DISPLAY_NAME);
     logger.initLogger(channel, 'info');
@@ -92,7 +93,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
     // For simplicity, use the first provider as the primary (multi-root per-folder
     // databases can be added in a future iteration by keeping all providers active)
-    const primaryProvider = storageProviders[0];;
+    const primaryProvider = storageProviders[0];
     const database = new IssueDatabase(primaryProvider);
 
     try {
@@ -341,6 +342,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 // deactivate
 // ---------------------------------------------------------------------------
 
+/** Called by VS Code when the extension is deactivated. */
 export function deactivate(): void {
     logger.disposeLogger();
 }

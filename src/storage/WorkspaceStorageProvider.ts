@@ -9,8 +9,8 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { IStorageProvider } from './IStorageProvider';
-import {
+import type { IStorageProvider } from './IStorageProvider';
+import type {
     Issue,
     Milestone,
     Sprint,
@@ -31,6 +31,7 @@ import {
 import { nowIso } from '../utils/idGenerator';
 import * as logger from '../utils/logger';
 
+/** Persists issue data in the workspace's `.vscode/issues/` directory (version-controllable). */
 export class WorkspaceStorageProvider implements IStorageProvider {
     private readonly rootUri: vscode.Uri;
     private readonly issuesUri: vscode.Uri;

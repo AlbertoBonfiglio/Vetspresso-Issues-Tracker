@@ -8,9 +8,11 @@
 import * as vscode from 'vscode';
 import { ExportService } from '../services/ExportService';
 import { ChangelogService } from '../services/ChangelogService';
-import { ExportFormat } from '../types';
+import type { ExportFormat } from '../types';
 import * as logger from '../utils/logger';
+import { CONFIG_SECTION, CFG_CHANGELOG_GROUP_BY_TYPE } from '../constants';
 
+/** Prompts for a format and exports issues to a file. */
 export async function cmdExportIssues(
     exportService: ExportService
 ): Promise<void> {
@@ -41,6 +43,7 @@ export async function cmdExportIssues(
     }
 }
 
+/** Imports issues from a user-selected JSON file. */
 export async function cmdImportIssues(exportService: ExportService): Promise<void> {
     try {
         const count = await exportService.importFromFile();
@@ -54,6 +57,7 @@ export async function cmdImportIssues(exportService: ExportService): Promise<voi
     }
 }
 
+/** Generates a changelog in Markdown or plain text from resolved/closed issues. */
 export async function cmdGenerateChangelog(
     changelogService: ChangelogService
 ): Promise<void> {
@@ -72,11 +76,13 @@ export async function cmdGenerateChangelog(
         placeHolder: 'e.g. v1.4.0',
     });
 
-    const versionOpt = versionFilter ? { version: versionFilter } : {};
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    const groupByType = config.get<boolean>(CFG_CHANGELOG_GROUP_BY_TYPE, true);
+    const opts = { ...(versionFilter ? { version: versionFilter } : {}), groupByType };
     const content =
         formatChoice.label === 'markdown'
-            ? changelogService.renderMarkdown(versionOpt)
-            : changelogService.renderPlainText(versionOpt);
+            ? changelogService.renderMarkdown(opts)
+            : changelogService.renderPlainText(opts);
 
     // Open in a new untitled document
     const doc = await vscode.workspace.openTextDocument({

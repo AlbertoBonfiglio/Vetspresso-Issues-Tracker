@@ -7,10 +7,11 @@
 
 import * as vscode from 'vscode';
 import { IssueService } from '../services/IssueService';
-import { Milestone, IssueStatus } from '../types';
+import type { Milestone, IssueStatus } from '../types';
 import { shortDate, relativeTime } from '../utils/helpers';
 import { CTX_MILESTONE, CTX_ISSUE } from '../constants';
 
+/** Tree item representing a milestone in the sidebar view. */
 export class MilestoneTreeItem extends vscode.TreeItem {
     constructor(
         public readonly milestone: Milestone,
@@ -40,6 +41,7 @@ export class MilestoneTreeItem extends vscode.TreeItem {
     }
 }
 
+/** Tree item representing an issue nested under a milestone. */
 export class MilestoneIssueItem extends vscode.TreeItem {
     constructor(sequentialId: number, title: string, issueId: string, status: IssueStatus) {
         super(`#${sequentialId} ${title}`, vscode.TreeItemCollapsibleState.None);
@@ -54,6 +56,7 @@ export class MilestoneIssueItem extends vscode.TreeItem {
     }
 }
 
+/** TreeDataProvider for the Milestones sidebar view. */
 export class MilestoneTreeProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     private readonly _onDidChangeTreeData = new vscode.EventEmitter<void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -87,7 +90,7 @@ export class MilestoneTreeProvider implements vscode.TreeDataProvider<vscode.Tre
 
         return milestones.map((m) => {
             const issues = allIssues.filter((i) => i.milestoneId === m.id);
-            const open = issues.filter((i) => ['open', 'in-progress', 'in-review'].includes(i.status)).length;
+            const open = issues.filter((i) => ['open', 'in-progress', 'in-review', 'on-hold'].includes(i.status)).length;
             return new MilestoneTreeItem(m, issues.length, open);
         });
     }

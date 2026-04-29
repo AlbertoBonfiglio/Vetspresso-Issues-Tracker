@@ -82,16 +82,19 @@ All settings are under `vetspresso-issues.*`:
 | --- | --- | --- |
 | `storageLocation` | `workspace` | Where issues are stored: `workspace` (`.vscode/issues/`) or `global` (VS Code global storage) |
 | `multiRootStorage` | `shared` | For multi-root workspaces: `shared` (one store) or `perFolder` (one store per folder) |
-| `defaultAssignee` | `""` | Pre-filled assignee name on new issues |
-| `staleThresholdDays` | `30` | Days of inactivity before an issue is marked stale |
-| `showResolvedInTree` | `false` | Show resolved/closed issues in the main Issues view |
-| `autoDetectVersion` | `true` | Auto-fill current git tag as "Reported In" version |
-| `enableCodeLens` | `true` | Show CodeLens above linked code lines |
-| `enableDecorations` | `true` | Show gutter icons on linked code lines |
-| `changelogGroupByType` | `true` | Group changelog entries by issue type |
-| `exportDateFormat` | `iso` | Date format in exports: `iso`, `locale`, `short` |
-| `author` | `""` | Your name — used as default reporter/assignee |
-| `sprintLengthDays` | `14` | Default sprint duration when creating sprints |
+| `author` | `""` | Your name or username — used as the reporter on new issues (falls back to git user) |
+| `defaultAssignee` | `""` | Default assignee username for new issues |
+| `defaultIssueType` | `bug` | Default issue type pre-selected when creating a new issue |
+| `staleIssueDays` | `30` | Days without activity before an open issue is flagged as stale |
+| `treeGroupBy` | `status` | How to group issues in the tree view (`status`, `type`, `severity`, `milestone`, `sprint`, `assignee`, `none`) |
+| `showResolvedIssues` | `false` | Include resolved and closed issues in the main tree view |
+| `showStatusBar` | `true` | Show an issue summary (open/critical counts) in the status bar |
+| `codeLensEnabled` | `true` | Show CodeLens entries above lines of code linked to issues |
+| `decorationsEnabled` | `true` | Show gutter icons on lines of code linked to issues |
+| `gitIntegration` | `true` | Enable Git integration for automatic version/tag detection |
+| `changelogGroupByType` | `true` | Group changelog entries by issue type (Bugs, Features, etc.) |
+| `exportDateFormat` | `iso` | Date format used in exports: `iso`, `locale`, `short` |
+| `sprintLengthDays` | `14` | Default sprint duration in days (used as the end-date offset when creating sprints) |
 
 ### Storage Locations
 

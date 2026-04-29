@@ -7,9 +7,10 @@
  */
 
 import { IssueDatabase } from '../database/IssueDatabase';
-import { Issue, IssueType } from '../types';
+import type { Issue, IssueType } from '../types';
 import { shortDate } from '../utils/helpers';
 
+/** Options controlling changelog generation scope and formatting. */
 export interface ChangelogOptions {
     /** Only include issues fixed in this version.  Omit for all versions. */
     version?: string;
@@ -48,6 +49,7 @@ const TYPE_ORDER: IssueType[] = [
     'other',
 ];
 
+/** Generates Markdown or plain-text changelogs from resolved/closed issues. */
 export class ChangelogService {
     constructor(private readonly db: IssueDatabase) { }
 

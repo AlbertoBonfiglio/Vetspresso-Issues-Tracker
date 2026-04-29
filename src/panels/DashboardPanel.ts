@@ -7,12 +7,13 @@
 
 import * as vscode from 'vscode';
 import { IssueService } from '../services/IssueService';
-import { Issue } from '../types';
+import type { Issue } from '../types';
 import { escapeHtml, generateNonce } from '../utils/helpers';
 import { EXTENSION_DISPLAY_NAME } from '../constants';
 
 const PANEL_TYPE = 'vetspresso-issues.dashboard';
 
+/** WebviewPanel that displays aggregate issue metrics and progress charts. */
 export class DashboardPanel {
     private static instance: DashboardPanel | undefined;
     private readonly panel: vscode.WebviewPanel;
@@ -111,7 +112,7 @@ export class DashboardPanel {
         const milestoneTable = milestones.length
             ? `<table>${milestones.map((m) => {
                 const msTotal = allIssues.filter((i) => i.milestoneId === m.id).length;
-                const msOpen = allIssues.filter((i) => i.milestoneId === m.id && ['open', 'in-progress', 'in-review'].includes(i.status)).length;
+                const msOpen = allIssues.filter((i) => i.milestoneId === m.id && ['open', 'in-progress', 'in-review', 'on-hold'].includes(i.status)).length;
                 return `<tr><td>${escapeHtml(m.name)}</td><td>${msOpen} open / ${msTotal} total</td><td>${bar(msTotal - msOpen, msTotal)}</td></tr>`;
             }).join('')}</table>`
             : '<p class="muted">No milestones defined.</p>';
@@ -119,7 +120,7 @@ export class DashboardPanel {
         const sprintTable = sprints.length
             ? `<table>${sprints.filter((s) => s.status === 'active').map((s) => {
                 const spTotal = allIssues.filter((i) => i.sprintId === s.id).length;
-                const spOpen = allIssues.filter((i) => i.sprintId === s.id && ['open', 'in-progress', 'in-review'].includes(i.status)).length;
+                const spOpen = allIssues.filter((i) => i.sprintId === s.id && ['open', 'in-progress', 'in-review', 'on-hold'].includes(i.status)).length;
                 return `<tr><td>${escapeHtml(s.name)}</td><td>${spOpen} open / ${spTotal} total</td><td>${bar(spTotal - spOpen, spTotal)}</td></tr>`;
             }).join('')}</table>`
             : '<p class="muted">No active sprints.</p>';

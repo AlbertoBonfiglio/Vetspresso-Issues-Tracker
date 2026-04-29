@@ -6,9 +6,10 @@
  */
 
 import { IssueDatabase } from '../database/IssueDatabase';
-import { IssueTemplate, Issue } from '../types';
+import type { IssueTemplate, Issue } from '../types';
 import { generateId, nowIso } from '../utils/idGenerator';
 
+/** CRUD façade for issue templates with validation. */
 export class TemplateService {
     constructor(private readonly db: IssueDatabase) { }
 

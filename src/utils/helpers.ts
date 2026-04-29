@@ -5,13 +5,14 @@
  */
 
 import * as vscode from 'vscode';
-import {
+import type {
     Issue,
     IssueStatus,
     IssueType,
     Severity,
     Urgency,
     GroupBy,
+    ExportDateFormat,
 } from '../types';
 import { CONFIG_SECTION, CFG_AUTHOR } from '../constants';
 
@@ -128,6 +129,7 @@ export function iconForStatus(status: IssueStatus): string {
         'open': 'issues',
         'in-progress': 'sync',
         'in-review': 'eye',
+        'on-hold': 'debug-pause',
         'resolved': 'check',
         'closed': 'circle-slash',
         'wontfix': 'x',
@@ -170,6 +172,7 @@ export function statusLabel(status: IssueStatus): string {
         'open': 'Open',
         'in-progress': 'In Progress',
         'in-review': 'In Review',
+        'on-hold': 'On Hold',
         'resolved': 'Resolved',
         'closed': 'Closed',
         'wontfix': 'Won\'t Fix',
@@ -190,7 +193,7 @@ export function isDone(issue: Issue): boolean {
  * Returns `true` if the issue is considered "open" (active work may be happening).
  */
 export function isActive(issue: Issue): boolean {
-    return ['open', 'in-progress', 'in-review'].includes(issue.status);
+    return ['open', 'in-progress', 'in-review', 'on-hold'].includes(issue.status);
 }
 
 /**
@@ -198,6 +201,25 @@ export function isActive(issue: Issue): boolean {
  */
 export function totalLoggedHours(issue: Issue): number {
     return issue.timeEntries.reduce((sum, e) => sum + e.hours, 0);
+}
+
+// ---------------------------------------------------------------------------
+// Export date formatting
+// ---------------------------------------------------------------------------
+
+/**
+ * Formats an ISO 8601 date/datetime string according to the chosen export style.
+ */
+export function formatExportDate(isoString: string, format: ExportDateFormat): string {
+    if (!isoString) { return ''; }
+    switch (format) {
+        case 'iso':
+            return isoString;
+        case 'locale':
+            return new Date(isoString).toLocaleString();
+        case 'short':
+            return isoString.slice(0, 10);
+    }
 }
 
 // ---------------------------------------------------------------------------

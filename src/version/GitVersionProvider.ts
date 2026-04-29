@@ -11,7 +11,7 @@
  */
 
 import * as vscode from 'vscode';
-import { IVersionProvider, ResolvedVersion } from './IVersionProvider';
+import type { IVersionProvider, ResolvedVersion } from './IVersionProvider';
 import * as logger from '../utils/logger';
 
 // ---------------------------------------------------------------------------
@@ -75,6 +75,7 @@ function compareTags(a: string, b: string): number {
     return b.localeCompare(a);
 }
 
+/** Resolves project versions from git tags via the VS Code built-in git extension API. */
 export class GitVersionProvider implements IVersionProvider {
     readonly id = 'git';
     readonly displayName = 'Git Tags';

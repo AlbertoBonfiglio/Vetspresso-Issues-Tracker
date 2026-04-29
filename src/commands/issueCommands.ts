@@ -11,7 +11,7 @@ import { SearchService } from '../services/SearchService';
 import { IssueDetailPanel } from '../panels/IssueDetailPanel';
 import { DashboardPanel } from '../panels/DashboardPanel';
 import { IssueTreeProvider } from '../providers/IssueTreeProvider';
-import {
+import type {
     Issue,
     IssueType,
     IssueStatus,
@@ -31,6 +31,7 @@ import * as logger from '../utils/logger';
 // Create / Edit
 // ---------------------------------------------------------------------------
 
+/** Walks the user through creating a new issue via a series of quick picks and input boxes. */
 export async function cmdCreateIssue(
     service: IssueService,
     extensionUri: vscode.Uri,
@@ -157,6 +158,7 @@ export async function cmdCreateIssue(
     }
 }
 
+/** Creates a new issue pre-populated from a saved template. */
 export async function cmdCreateFromTemplate(
     service: IssueService,
     extensionUri: vscode.Uri
@@ -185,6 +187,7 @@ export async function cmdCreateFromTemplate(
     });
 }
 
+/** Opens an inline edit flow for an existing issue's fields. */
 export async function cmdEditIssue(
     service: IssueService,
     _extensionUri: vscode.Uri,
@@ -197,7 +200,7 @@ export async function cmdEditIssue(
     });
     if (!newTitle) { return; }
 
-    const statuses: IssueStatus[] = ['open', 'in-progress', 'in-review', 'resolved', 'closed', 'wontfix', 'duplicate'];
+    const statuses: IssueStatus[] = ['open', 'in-progress', 'in-review', 'on-hold', 'resolved', 'closed', 'wontfix', 'duplicate'];
     const statusChoice = await vscode.window.showQuickPick(
         statuses.map((s) => ({ label: s, picked: s === issue.status })),
         { title: `Edit Issue #${issue.sequentialId} — Status` }
@@ -307,6 +310,7 @@ export async function cmdEditIssue(
     }
 }
 
+/** Opens the IssueDetailPanel webview for the given issue. */
 export function cmdViewIssue(
     service: IssueService,
     extensionUri: vscode.Uri,
@@ -321,6 +325,7 @@ export function cmdViewIssue(
     IssueDetailPanel.show(extensionUri, service, issue);
 }
 
+/** Deletes an issue after user confirmation. */
 export async function cmdDeleteIssue(service: IssueService, issue: Issue): Promise<void> {
     const confirm = await vscode.window.showWarningMessage(
         `Delete issue #${issue.sequentialId} "${issue.title}"? This cannot be undone.`,
@@ -337,6 +342,7 @@ export async function cmdDeleteIssue(service: IssueService, issue: Issue): Promi
     }
 }
 
+/** Sets the issue status to `closed`. */
 export async function cmdCloseIssue(service: IssueService, issue: Issue): Promise<void> {
     try {
         await service.closeIssue(issue.id);
@@ -345,6 +351,7 @@ export async function cmdCloseIssue(service: IssueService, issue: Issue): Promis
     }
 }
 
+/** Sets the issue status to `resolved` and records the fixed-in version. */
 export async function cmdResolveIssue(service: IssueService, issue: Issue): Promise<void> {
     // Optionally select the fix version
     const folderUri = vscode.workspace.workspaceFolders?.[0]?.uri;
@@ -368,6 +375,7 @@ export async function cmdResolveIssue(service: IssueService, issue: Issue): Prom
     }
 }
 
+/** Reopens a resolved/closed issue by setting its status back to `open`. */
 export async function cmdReopenIssue(service: IssueService, issue: Issue): Promise<void> {
     try {
         await service.reopenIssue(issue.id);
@@ -380,6 +388,7 @@ export async function cmdReopenIssue(service: IssueService, issue: Issue): Promi
 // Code linking
 // ---------------------------------------------------------------------------
 
+/** Links the current editor selection to the given issue as a CodeLink. */
 export async function cmdLinkCodeToIssue(
     service: IssueService,
     searchService: SearchService
@@ -421,6 +430,7 @@ export async function cmdLinkCodeToIssue(
 // Time logging
 // ---------------------------------------------------------------------------
 
+/** Logs time against an issue via an input box. */
 export async function cmdLogTime(service: IssueService, issue: Issue): Promise<void> {
     const hoursStr = await vscode.window.showInputBox({
         title: `Log Time — Issue #${issue.sequentialId}`,
@@ -448,6 +458,7 @@ export async function cmdLogTime(service: IssueService, issue: Issue): Promise<v
 // Relations
 // ---------------------------------------------------------------------------
 
+/** Adds a typed relation between two issues. */
 export async function cmdAddRelation(
     service: IssueService,
     searchService: SearchService,
@@ -473,7 +484,7 @@ export async function cmdAddRelation(
     if (!targetChoice) { return; }
 
     const relTypes: RelationType[] = [
-        'blocks', 'blocked-by', 'relates-to', 'duplicates', 'duplicated-by', 'parent-of', 'child-of',
+        'blocks', 'blocked-by', 'relates-to', 'duplicates', 'duplicated-by', 'parent-of', 'child-of', 'clones',
     ];
     const typeChoice = await vscode.window.showQuickPick(
         relTypes.map((t) => ({ label: t })),
@@ -495,6 +506,7 @@ export async function cmdAddRelation(
 // Search / Filter
 // ---------------------------------------------------------------------------
 
+/** Opens a search dialog and displays matching issues in a quick pick. */
 export async function cmdSearchIssues(
     searchService: SearchService,
     service: IssueService,
@@ -530,6 +542,7 @@ export async function cmdSearchIssues(
     }
 }
 
+/** Builds a multi-criteria filter and applies it to the issue tree. */
 export async function cmdFilterIssues(
     treeProvider: IssueTreeProvider,
     service: IssueService
@@ -540,7 +553,7 @@ export async function cmdFilterIssues(
     const statusPick = await vscode.window.showQuickPick(
         [
             { label: '(any status)', all: true },
-            ...((['open', 'in-progress', 'in-review', 'resolved', 'closed', 'wontfix', 'duplicate'] as IssueStatus[]).map((s) => ({ label: s, all: false }))),
+            ...((['open', 'in-progress', 'in-review', 'on-hold', 'resolved', 'closed', 'wontfix', 'duplicate'] as IssueStatus[]).map((s) => ({ label: s, all: false }))),
         ],
         {
             title: 'Filter Issues — Status',
@@ -570,6 +583,7 @@ export async function cmdFilterIssues(
 // Copy
 // ---------------------------------------------------------------------------
 
+/** Copies the issue's sequential ID to the clipboard. */
 export async function cmdCopyIssueId(issue: Issue): Promise<void> {
     await vscode.env.clipboard.writeText(`#${issue.sequentialId}`);
     void vscode.window.showInformationMessage(`Copied #${issue.sequentialId} to clipboard.`);
@@ -579,6 +593,7 @@ export async function cmdCopyIssueId(issue: Issue): Promise<void> {
 // Dashboard
 // ---------------------------------------------------------------------------
 
+/** Opens (or reveals) the aggregate metrics dashboard webview. */
 export function cmdOpenDashboard(extensionUri: vscode.Uri, service: IssueService): void {
     DashboardPanel.show(extensionUri, service);
 }
@@ -587,6 +602,7 @@ export function cmdOpenDashboard(extensionUri: vscode.Uri, service: IssueService
 // GroupBy
 // ---------------------------------------------------------------------------
 
+/** Prompts the user to choose a tree-view grouping strategy. */
 export async function cmdGroupBy(): Promise<void> {
     const options: GroupBy[] = ['status', 'type', 'severity', 'milestone', 'sprint', 'assignee', 'none'];
     const choice = await vscode.window.showQuickPick(
@@ -603,6 +619,7 @@ export async function cmdGroupBy(): Promise<void> {
 // Version-related
 // ---------------------------------------------------------------------------
 
+/** Opens issues linked to the current workspace version. */
 export async function cmdOpenCurrentVersionIssues(
     service: IssueService,
     extensionUri: vscode.Uri

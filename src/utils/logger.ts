@@ -7,6 +7,7 @@
 import * as vscode from 'vscode';
 import { EXTENSION_DISPLAY_NAME } from '../constants';
 
+/** Supported log severity levels. */
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 /** Singleton output channel used by the logger. */

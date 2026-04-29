@@ -23,6 +23,7 @@ export type IssueStatus =
     | 'open'
     | 'in-progress'
     | 'in-review'
+    | 'on-hold'
     | 'resolved'
     | 'closed'
     | 'wontfix'
@@ -42,13 +43,17 @@ export type RelationType =
     | 'duplicates'
     | 'duplicated-by'
     | 'parent-of'
-    | 'child-of';
+    | 'child-of'
+    | 'clones';
 
 /** Sprint lifecycle state. */
-export type SprintStatus = 'planned' | 'active' | 'completed';
+export type SprintStatus = 'planned' | 'active' | 'completed' | 'cancelled';
 
 /** Supported export formats. */
 export type ExportFormat = 'json' | 'csv' | 'markdown' | 'github-json';
+
+/** Date format style used in exports. */
+export type ExportDateFormat = 'iso' | 'locale' | 'short';
 
 /** Tree view grouping strategy. */
 export type GroupBy =

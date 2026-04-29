@@ -9,8 +9,8 @@
  */
 
 import * as vscode from 'vscode';
-import { IStorageProvider } from './IStorageProvider';
-import {
+import type { IStorageProvider } from './IStorageProvider';
+import type {
     Issue,
     Milestone,
     Sprint,
@@ -29,6 +29,7 @@ import {
 import * as logger from '../utils/logger';
 import { nowIso } from '../utils/idGenerator';
 
+/** Persists issue data in VS Code's globalStorageUri (machine-local, invisible to git). */
 export class GlobalStorageProvider implements IStorageProvider {
     private readonly rootUri: vscode.Uri;
     private readonly issuesUri: vscode.Uri;

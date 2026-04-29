@@ -7,7 +7,7 @@
 
 import * as vscode from 'vscode';
 import { IssueService } from '../services/IssueService';
-import { Sprint } from '../types';
+import type { Sprint } from '../types';
 import { shortDate } from '../utils/helpers';
 import { CTX_SPRINT, CTX_ISSUE } from '../constants';
 
@@ -15,8 +15,10 @@ const SPRINT_ICON: Record<Sprint['status'], string> = {
     planned: 'clock',
     active: 'sync',
     completed: 'check',
+    cancelled: 'circle-slash',
 };
 
+/** Tree item representing a sprint in the sidebar view. */
 export class SprintTreeItem extends vscode.TreeItem {
     constructor(
         public readonly sprint: Sprint,
@@ -37,6 +39,7 @@ export class SprintTreeItem extends vscode.TreeItem {
     }
 }
 
+/** Tree item representing an issue nested under a sprint. */
 export class SprintIssueItem extends vscode.TreeItem {
     constructor(sequentialId: number, title: string, issueId: string) {
         super(`#${sequentialId} ${title}`, vscode.TreeItemCollapsibleState.None);
@@ -50,6 +53,7 @@ export class SprintIssueItem extends vscode.TreeItem {
     }
 }
 
+/** TreeDataProvider for the Sprints sidebar view. */
 export class SprintTreeProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     private readonly _onDidChangeTreeData = new vscode.EventEmitter<void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -80,12 +84,12 @@ export class SprintTreeProvider implements vscode.TreeDataProvider<vscode.TreeIt
         return sprints
             .sort((a, b) => {
                 // Active sprints first, then planned, then completed
-                const order: Record<Sprint['status'], number> = { active: 0, planned: 1, completed: 2 };
+                const order: Record<Sprint['status'], number> = { active: 0, planned: 1, completed: 2, cancelled: 3 };
                 return order[a.status] - order[b.status];
             })
             .map((s) => {
                 const issues = allIssues.filter((i) => i.sprintId === s.id);
-                const open = issues.filter((i) => ['open', 'in-progress', 'in-review'].includes(i.status)).length;
+                const open = issues.filter((i) => ['open', 'in-progress', 'in-review', 'on-hold'].includes(i.status)).length;
                 return new SprintTreeItem(s, issues.length, open);
             });
     }

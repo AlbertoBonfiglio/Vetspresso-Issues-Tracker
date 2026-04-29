@@ -6,11 +6,12 @@
  */
 
 import { IssueDatabase } from '../database/IssueDatabase';
-import { Issue, SearchResult } from '../types';
+import type { Issue, SearchResult } from '../types';
 import { truncate } from '../utils/helpers';
 
 const EXCERPT_LENGTH = 120;
 
+/** Full-text and structured search across all issues. */
 export class SearchService {
     constructor(private readonly db: IssueDatabase) { }
 

@@ -247,7 +247,7 @@ describe('helpers — relativeTime all branches', () => {
 
 describe('helpers — icon / colour / label helpers', () => {
     const issueTypes = ['bug', 'enhancement', 'feature', 'task', 'question', 'documentation', 'other'] as const;
-    const statuses = ['open', 'in-progress', 'in-review', 'resolved', 'closed', 'wontfix', 'duplicate'] as const;
+    const statuses = ['open', 'in-progress', 'in-review', 'on-hold', 'resolved', 'closed', 'wontfix', 'duplicate'] as const;
     const severities = ['critical', 'high', 'medium', 'low', 'trivial'] as const;
     const groupBys = ['type', 'status', 'severity', 'milestone', 'sprint', 'assignee', 'none'] as const;
 

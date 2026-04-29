@@ -40,8 +40,8 @@
     "lint": "eslint src --ext ts",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
-
+    "test:coverage": "vitest run --coverage",
+    "compile-tests": "tsc -p tsconfig.test.json --noEmit"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
@@ -614,6 +614,33 @@
           "type": "boolean",
           "default": true,
           "description": "Show gutter icons on lines of code linked to issues."
+        },
+        "vetspresso-issues.changelogGroupByType": {
+          "type": "boolean",
+          "default": true,
+          "description": "Group changelog entries by issue type (Bugs, Features, Enhancements, etc.) when generating a changelog."
+        },
+        "vetspresso-issues.exportDateFormat": {
+          "type": "string",
+          "enum": [
+            "iso",
+            "locale",
+            "short"
+          ],
+          "enumDescriptions": [
+            "ISO 8601 format (e.g. 2024-03-25T14:30:00.000Z)",
+            "Locale-aware format (e.g. 3/25/2024, 2:30:00 PM)",
+            "Short date only (e.g. 2024-03-25)"
+          ],
+          "default": "iso",
+          "description": "Date format used in exported files (CSV, Markdown, GitHub JSON)."
+        },
+        "vetspresso-issues.sprintLengthDays": {
+          "type": "number",
+          "default": 14,
+          "minimum": 1,
+          "maximum": 365,
+          "description": "Default sprint duration in days. Used as the default end-date offset when creating new sprints."
         }
       }
     },

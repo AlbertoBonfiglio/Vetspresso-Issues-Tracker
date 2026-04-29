@@ -8,9 +8,10 @@
 
 import * as vscode from 'vscode';
 import { IssueService } from '../services/IssueService';
-import { Issue, TimeEntry } from '../types';
+import type { Issue, TimeEntry } from '../types';
 import { shortDate } from '../utils/helpers';
 
+/** TreeDataProvider for the Time Tracking sidebar view showing per-assignee hours. */
 export class TimeTrackingProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     private readonly _onDidChangeTreeData = new vscode.EventEmitter<void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;

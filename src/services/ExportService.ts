@@ -8,8 +8,10 @@
 
 import * as vscode from 'vscode';
 import { IssueDatabase } from '../database/IssueDatabase';
-import { Issue, ExportFormat } from '../types';
+import type { Issue, ExportFormat, ExportDateFormat } from '../types';
 import * as logger from '../utils/logger';
+import { formatExportDate } from '../utils/helpers';
+import { CONFIG_SECTION, CFG_EXPORT_DATE_FORMAT } from '../constants';
 
 /** Header row for the CSV export. */
 const CSV_HEADERS = [
@@ -19,6 +21,7 @@ const CSV_HEADERS = [
     'loggedHours', 'createdAt', 'updatedAt', 'resolvedAt', 'description',
 ];
 
+/** Handles exporting issues to JSON/CSV/Markdown/GitHub JSON and importing from JSON. */
 export class ExportService {
     constructor(private readonly db: IssueDatabase) { }
 
@@ -33,10 +36,13 @@ export class ExportService {
      */
     export(format: ExportFormat, issues?: Issue[]): string {
         const data = issues ?? this.db.getAllIssues();
+        const dateFmt = vscode.workspace
+            .getConfiguration(CONFIG_SECTION)
+            .get<ExportDateFormat>(CFG_EXPORT_DATE_FORMAT, 'iso');
         switch (format) {
             case 'json': return this.toJson(data);
-            case 'csv': return this.toCsv(data);
-            case 'markdown': return this.toMarkdown(data);
+            case 'csv': return this.toCsv(data, dateFmt);
+            case 'markdown': return this.toMarkdown(data, dateFmt);
             case 'github-json': return this.toGitHubJson(data);
         }
     }
@@ -133,7 +139,7 @@ export class ExportService {
         return JSON.stringify(issues, null, 2);
     }
 
-    private toCsv(issues: Issue[]): string {
+    private toCsv(issues: Issue[], dateFmt: ExportDateFormat = 'iso'): string {
         const rows: string[] = [CSV_HEADERS.map(csvCell).join(',')];
         for (const issue of issues) {
             const totalLogged = issue.timeEntries.reduce((s, e) => s + e.hours, 0);
@@ -155,22 +161,22 @@ export class ExportService {
                 issue.tags.join(';'),
                 String(issue.estimatedHours ?? ''),
                 String(totalLogged),
-                issue.createdAt,
-                issue.updatedAt,
-                issue.resolvedAt ?? '',
+                formatExportDate(issue.createdAt, dateFmt),
+                formatExportDate(issue.updatedAt, dateFmt),
+                issue.resolvedAt ? formatExportDate(issue.resolvedAt, dateFmt) : '',
                 issue.description,
             ].map(csvCell).join(','));
         }
         return rows.join('\r\n');
     }
 
-    private toMarkdown(issues: Issue[]): string {
+    private toMarkdown(issues: Issue[], dateFmt: ExportDateFormat = 'iso'): string {
         const sortedIssues = [...issues].sort((a, b) => a.sequentialId - b.sequentialId);
 
         const lines: string[] = [
             '# Issues Export',
             '',
-            `> Exported ${new Date().toISOString()}  `,
+            `> Exported ${formatExportDate(new Date().toISOString(), dateFmt)}  `,
             `> Total: ${issues.length} issues`,
             '',
             '| # | Title | Type | Status | Severity | Assignee | Version |',

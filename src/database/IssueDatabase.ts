@@ -10,8 +10,8 @@
  */
 
 import * as vscode from 'vscode';
-import { IStorageProvider } from '../storage/IStorageProvider';
-import {
+import type { IStorageProvider } from '../storage/IStorageProvider';
+import type {
     Issue,
     IssueStatus,
     Milestone,
@@ -27,11 +27,13 @@ import * as logger from '../utils/logger';
 // Event payloads
 // ---------------------------------------------------------------------------
 
+/** Payload emitted when an issue is created, updated, or deleted. */
 export interface IssueChangedEvent {
     type: 'created' | 'updated' | 'deleted';
     issue: Issue;
 }
 
+/** Payload emitted when milestones, sprints, or templates change. */
 export interface MetaChangedEvent {
     type: 'milestone' | 'sprint' | 'template';
 }
@@ -379,7 +381,7 @@ export class IssueDatabase {
     getOpenCount(): number {
         let count = 0;
         for (const issue of this.issueCache.values()) {
-            if (['open', 'in-progress', 'in-review'].includes(issue.status)) {
+            if (['open', 'in-progress', 'in-review', 'on-hold'].includes(issue.status)) {
                 count++;
             }
         }
@@ -392,7 +394,7 @@ export class IssueDatabase {
         for (const issue of this.issueCache.values()) {
             if (
                 issue.severity === 'critical' &&
-                ['open', 'in-progress', 'in-review'].includes(issue.status)
+                ['open', 'in-progress', 'in-review', 'on-hold'].includes(issue.status)
             ) {
                 count++;
             }

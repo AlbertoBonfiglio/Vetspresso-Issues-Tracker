@@ -76,17 +76,21 @@ vetspresso-issues/
 │       ├── milestoneCommands.ts  ← Milestone + sprint commands
 │       └── exportCommands.ts     ← Export, import, changelog commands
 ├── test/
-│   ├── runTests.ts               ← @vscode/test-electron runner
 │   └── suite/
-│       ├── index.ts              ← Mocha glob discoverer
-│       ├── helpers.test.ts       ← Utils / helpers unit tests
-│       ├── issueDatabase.test.ts ← Database layer tests (memory stub)
-│       ├── issueService.test.ts  ← Service layer tests
-│       ├── searchService.test.ts ← Search unit tests
-│       ├── changelogService.test.ts ← Changelog unit tests
-│       ├── exportService.test.ts ← Export/import unit tests
-│       ├── versionProvider.test.ts  ← Git version provider tests
-│       └── storageProvider.test.ts  ← Storage provider I/O tests
+│       ├── helpers.test.ts              ← Utils / helpers unit tests
+│       ├── issueDatabase.test.ts        ← Database layer tests (memory stub)
+│       ├── issueService.test.ts         ← Service layer tests
+│       ├── searchService.test.ts        ← Search unit tests
+│       ├── changelogService.test.ts     ← Changelog unit tests
+│       ├── exportService.test.ts        ← Export/import unit tests
+│       ├── templateService.test.ts      ← Template CRUD tests
+│       ├── versionProvider.test.ts      ← Git version provider tests
+│       ├── storageProvider.test.ts      ← Storage provider I/O tests
+│       ├── storageProviderFactory.test.ts ← Provider factory tests
+│       ├── providers.test.ts            ← Tree/CodeLens/StatusBar provider tests
+│       ├── issueCommands.test.ts        ← Issue command tests
+│       ├── milestoneCommands.test.ts    ← Milestone/sprint command tests
+│       └── logger.test.ts               ← Logger unit tests
 ├── docs/
 │   ├── HOW_TO_USE.md
 │   └── CONTRIBUTING.md  ← This file
@@ -178,14 +182,17 @@ Log levels: `DEBUG`, `INFO`, `WARN`, `ERROR`. Set `vetspresso-issues.logLevel` i
 ## Running Tests
 
 ```sh
-# Run build first
-npm run compile
-
 # Run all tests
 npm test
+
+# Run tests in watch mode
+npx vitest
+
+# Run a specific test file
+npx vitest run test/suite/helpers.test.ts
 ```
 
-Tests run via `@vscode/test-electron`, which downloads a VS Code binary and runs Mocha in the Extension Host. They do not require an actual VS Code installation beyond what's downloaded automatically.
+Tests run via **Vitest** — no VS Code binary or Extension Host is needed. The `vscode` module is mocked so all tests execute in a plain Node.js process, keeping the feedback loop fast.
 
 ### Test strategy
 
@@ -197,16 +204,23 @@ Tests run via `@vscode/test-electron`, which downloads a VS Code binary and runs
 | `searchService.test.ts` | Full-text search + ranking | No (memory stub) |
 | `changelogService.test.ts` | Changelog build + render | No (memory stub) |
 | `exportService.test.ts` | All export formats + import | No (memory stub) |
+| `templateService.test.ts` | Template CRUD + defaults | No (memory stub) |
 | `versionProvider.test.ts` | Git API parsing + sorting | No (git ext stub) |
 | `storageProvider.test.ts` | File I/O round-trips | Node fs shim (tmp dirs) |
+| `storageProviderFactory.test.ts` | Provider builder + config | No (mocked config) |
+| `providers.test.ts` | Tree/CodeLens/StatusBar providers | No (mocked vscode) |
+| `issueCommands.test.ts` | Issue command handlers | No (mocked vscode) |
+| `milestoneCommands.test.ts` | Milestone/sprint commands | No (mocked vscode) |
+| `logger.test.ts` | Logger output + levels | No (mocked channel) |
 
-All tests use in-memory or temporary-directory stubs. No real git repository or VS Code workspace is needed (the `@vscode/test-electron` runtime is used purely to host the Mocha runner safely).
+All tests use in-memory or temporary-directory stubs. The `vscode` module is mocked via Vitest's module-mocking facility, so no real VS Code installation or Extension Host is needed.
 
 ### Adding Tests
 
 1. Create a new file in `test/suite/` matching the `*.test.ts` glob
-2. Export a Mocha `suite()` (TDD interface — `suite`, `test`, `setup`, `teardown`)
+2. Use Vitest's `describe()` / `it()` / `beforeEach()` / `afterEach()` APIs
 3. Import from `../../src/...` as needed
+4. Mock the `vscode` module if the code under test imports it
 
 ---
 

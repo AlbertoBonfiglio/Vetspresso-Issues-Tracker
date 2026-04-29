@@ -9,7 +9,7 @@
 
 import * as vscode from 'vscode';
 import { IssueService } from '../services/IssueService';
-import {
+import type {
     Issue,
     GroupBy,
     IssueFilter,
@@ -36,6 +36,7 @@ import { debounce } from '../utils/helpers';
 // Tree item types
 // ---------------------------------------------------------------------------
 
+/** Tree item representing a single issue in the sidebar view. */
 export class IssueTreeItem extends vscode.TreeItem {
     constructor(
         public readonly issue: Issue,
@@ -89,6 +90,7 @@ export class IssueTreeItem extends vscode.TreeItem {
     }
 }
 
+/** Tree item representing a group header (e.g. a status or type bucket). */
 export class GroupTreeItem extends vscode.TreeItem {
     constructor(
         public readonly label: string,
@@ -105,6 +107,7 @@ export class GroupTreeItem extends vscode.TreeItem {
 // IssueTreeProvider
 // ---------------------------------------------------------------------------
 
+/** TreeDataProvider for the main issues sidebar view with grouping and filtering. */
 export class IssueTreeProvider implements vscode.TreeDataProvider<vscode.TreeItem> {
     private readonly _onDidChangeTreeData = new vscode.EventEmitter<vscode.TreeItem | undefined | null | void>();
     readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -254,6 +257,7 @@ function issue_statusBadge(issue: Issue): string {
         'open': 'open',
         'in-progress': '▶ in progress',
         'in-review': '👁 in review',
+        'on-hold': '⏸ on hold',
         'resolved': '✓ resolved',
         'closed': 'closed',
         'wontfix': 'won\'t fix',
@@ -263,7 +267,7 @@ function issue_statusBadge(issue: Issue): string {
 }
 
 const STATUS_ORDER: IssueStatus[] = [
-    'open', 'in-progress', 'in-review', 'resolved', 'closed', 'wontfix', 'duplicate',
+    'open', 'in-progress', 'in-review', 'on-hold', 'resolved', 'closed', 'wontfix', 'duplicate',
 ];
 
 const SEVERITY_ORDER: Severity[] = [

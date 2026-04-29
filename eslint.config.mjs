@@ -53,7 +53,7 @@ export default [
             'no-throw-literal': 'warn',
             'semi': ['warn', 'always'],
             'quotes': ['warn', 'single'],
-            'no-console': 'off',
+            'no-console': ['error', { allow: ['warn', 'error'] }],
         },
     },
 ];

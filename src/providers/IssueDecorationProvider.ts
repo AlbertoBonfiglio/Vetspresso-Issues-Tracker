@@ -26,6 +26,7 @@ const decorationType = vscode.window.createTextEditorDecorationType({
     },
 });
 
+/** Manages gutter decorations that highlight code lines linked to issues. */
 export class IssueDecorationProvider {
     private readonly debouncedUpdate: (editor: vscode.TextEditor) => void;
     private readonly disposables: vscode.Disposable[] = [];

@@ -7,7 +7,7 @@
  */
 
 import * as vscode from 'vscode';
-import { IVersionProvider, ResolvedVersion } from './IVersionProvider';
+import type { IVersionProvider, ResolvedVersion } from './IVersionProvider';
 import { GitVersionProvider } from './GitVersionProvider';
 import * as logger from '../utils/logger';
 

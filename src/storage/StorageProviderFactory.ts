@@ -16,7 +16,7 @@ import {
     CFG_STORAGE_LOCATION,
     CFG_MULTI_ROOT_STORAGE,
 } from '../constants';
-import { StorageLocation, MultiRootStorage } from '../types';
+import type { StorageLocation, MultiRootStorage } from '../types';
 
 /**
  * Builds one or more `IStorageProvider` instances based on the extension

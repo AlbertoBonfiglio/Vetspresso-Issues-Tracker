@@ -13,7 +13,7 @@
 
 import * as vscode from 'vscode';
 import { IssueDatabase } from '../database/IssueDatabase';
-import {
+import type {
     Issue,
     IssueType,
     CodeLink,
@@ -39,6 +39,7 @@ import {
 import { getCurrentVersion } from '../version/VersionProviderFactory';
 import * as logger from '../utils/logger';
 
+/** Business-logic layer over IssueDatabase handling filters, stale detection, and code-links. */
 export class IssueService {
     constructor(private readonly db: IssueDatabase) { }
 
@@ -71,7 +72,7 @@ export class IssueService {
     }
 
     getOpenIssues(): Issue[] {
-        return this.getIssues({ status: ['open', 'in-progress', 'in-review'] });
+        return this.getIssues({ status: ['open', 'in-progress', 'in-review', 'on-hold'] });
     }
 
     getIssuesForVersion(version: string): Issue[] {

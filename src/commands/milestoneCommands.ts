@@ -7,13 +7,15 @@
 
 import * as vscode from 'vscode';
 import { IssueService } from '../services/IssueService';
-import { Issue, Milestone, Sprint, SprintStatus } from '../types';
+import type { Issue, Milestone, Sprint, SprintStatus } from '../types';
 import * as logger from '../utils/logger';
+import { CONFIG_SECTION, CFG_SPRINT_LENGTH_DAYS } from '../constants';
 
 // ---------------------------------------------------------------------------
 // Milestones
 // ---------------------------------------------------------------------------
 
+/** Walks the user through creating a new milestone. */
 export async function cmdCreateMilestone(service: IssueService): Promise<void> {
     const name = await vscode.window.showInputBox({
         title: 'New Milestone — Name',
@@ -50,6 +52,7 @@ export async function cmdCreateMilestone(service: IssueService): Promise<void> {
     }
 }
 
+/** Edits an existing milestone's name, description, and target date. */
 export async function cmdEditMilestone(service: IssueService, milestone: Milestone): Promise<void> {
     const name = await vscode.window.showInputBox({
         title: `Edit Milestone — "${milestone.name}"`,
@@ -84,6 +87,7 @@ export async function cmdEditMilestone(service: IssueService, milestone: Milesto
     }
 }
 
+/** Deletes a milestone after user confirmation. */
 export async function cmdDeleteMilestone(service: IssueService, milestone: Milestone): Promise<void> {
     const issueCount = service.getIssues().filter((i) => i.milestoneId === milestone.id).length;
     const confirm = await vscode.window.showWarningMessage(
@@ -105,6 +109,7 @@ export async function cmdDeleteMilestone(service: IssueService, milestone: Miles
 // Sprints
 // ---------------------------------------------------------------------------
 
+/** Walks the user through creating a new sprint with configurable default duration. */
 export async function cmdCreateSprint(service: IssueService): Promise<void> {
     const name = await vscode.window.showInputBox({
         title: 'New Sprint — Name',
@@ -124,14 +129,24 @@ export async function cmdCreateSprint(service: IssueService): Promise<void> {
         validateInput: (v) => (!v || /^\d{4}-\d{2}-\d{2}$/.test(v) ? null : 'Use YYYY-MM-DD.'),
     });
 
+    const config = vscode.workspace.getConfiguration(CONFIG_SECTION);
+    const sprintDays = config.get<number>(CFG_SPRINT_LENGTH_DAYS, 14);
+    let defaultEnd = '';
+    if (startDate?.trim()) {
+        const d = new Date(startDate.trim());
+        d.setDate(d.getDate() + sprintDays);
+        defaultEnd = d.toISOString().slice(0, 10);
+    }
+
     const endDate = await vscode.window.showInputBox({
         title: 'New Sprint — End Date (optional)',
         prompt: 'YYYY-MM-DD',
+        value: defaultEnd,
         validateInput: (v) => (!v || /^\d{4}-\d{2}-\d{2}$/.test(v) ? null : 'Use YYYY-MM-DD.'),
     });
 
     const statusChoice = await vscode.window.showQuickPick(
-        (['planned', 'active', 'completed'] as SprintStatus[]).map((s) => ({ label: s, picked: s === 'planned' })),
+        (['planned', 'active', 'completed', 'cancelled'] as SprintStatus[]).map((s) => ({ label: s, picked: s === 'planned' })),
         { title: 'New Sprint — Status' }
     );
     if (!statusChoice) { return; }
@@ -151,6 +166,7 @@ export async function cmdCreateSprint(service: IssueService): Promise<void> {
     }
 }
 
+/** Edits an existing sprint's name, goal, and status. */
 export async function cmdEditSprint(service: IssueService, sprint: Sprint): Promise<void> {
     const name = await vscode.window.showInputBox({
         title: `Edit Sprint — "${sprint.name}"`,
@@ -166,7 +182,7 @@ export async function cmdEditSprint(service: IssueService, sprint: Sprint): Prom
     });
 
     const statusChoice = await vscode.window.showQuickPick(
-        (['planned', 'active', 'completed'] as SprintStatus[]).map((s) => ({ label: s, picked: s === sprint.status })),
+        (['planned', 'active', 'completed', 'cancelled'] as SprintStatus[]).map((s) => ({ label: s, picked: s === sprint.status })),
         { title: 'Edit Sprint — Status' }
     );
     if (!statusChoice) { return; }
@@ -182,6 +198,7 @@ export async function cmdEditSprint(service: IssueService, sprint: Sprint): Prom
     }
 }
 
+/** Deletes a sprint after user confirmation. */
 export async function cmdDeleteSprint(service: IssueService, sprint: Sprint): Promise<void> {
     const issueCount = service.getIssues().filter((i) => i.sprintId === sprint.id).length;
     const confirm = await vscode.window.showWarningMessage(
@@ -203,6 +220,7 @@ export async function cmdDeleteSprint(service: IssueService, sprint: Sprint): Pr
 // Assign sprint / milestone to an issue
 // ---------------------------------------------------------------------------
 
+/** Assigns an issue to a sprint via quick pick. */
 export async function cmdAssignSprint(service: IssueService, issue: Issue): Promise<void> {
     const sprints = service.getSprints();
     const items: vscode.QuickPickItem[] = [
@@ -235,6 +253,7 @@ export async function cmdAssignSprint(service: IssueService, issue: Issue): Prom
     }
 }
 
+/** Assigns an issue to a milestone via quick pick. */
 export async function cmdAssignMilestone(service: IssueService, issue: Issue): Promise<void> {
     const milestones = service.getMilestones();
     const items: vscode.QuickPickItem[] = [
