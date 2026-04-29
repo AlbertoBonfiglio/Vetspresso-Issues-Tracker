@@ -209,6 +209,52 @@ describe('WorkspaceStorageProvider', () => {
         const result = await provider.readKnownPersons();
         assert.deepStrictEqual(result, []);
     });
+
+    test('readTemplates() returns default templates when no file exists', async () => {
+        const result = await provider.readTemplates();
+        assert.ok(result.length >= 1);
+        // Default templates include a Bug Report
+        assert.ok(result.some((t) => t.name === 'Bug Report'));
+    });
+
+    test('writeTemplates() then readTemplates() round-trips', async () => {
+        const now = nowIso();
+        const templates = [
+            { id: generateId(), name: 'Custom', description: 'custom tpl', type: 'task' as const, titleTemplate: '', defaultSeverity: 'low' as const, defaultUrgency: 'low' as const, defaultTags: [], bodyTemplate: '', createdAt: now, updatedAt: now },
+        ];
+        await provider.writeTemplates(templates);
+        const read = await provider.readTemplates();
+        assert.strictEqual(read.length, 1);
+        assert.strictEqual(read[0].name, 'Custom');
+    });
+
+    test('deleteIssue() is a no-op for non-existent id', async () => {
+        await assert.doesNotReject(() => provider.deleteIssue('ghost-id'));
+    });
+
+    test('readAllIssues() skips non-.json files in issues dir', async () => {
+        const issuesDir = path.join(tmpDir, '.vscode', 'issues', 'issues');
+        await fsp.writeFile(path.join(issuesDir, 'readme.txt'), 'not json');
+        const issue = mkIssue({ title: 'Real' });
+        await provider.writeIssue(issue);
+        const issues = await provider.readAllIssues();
+        assert.strictEqual(issues.length, 1);
+        assert.strictEqual(issues[0].title, 'Real');
+    });
+
+    test('readMilestones() returns empty array when no file exists', async () => {
+        const result = await provider.readMilestones();
+        assert.deepStrictEqual(result, []);
+    });
+
+    test('readSprints() returns empty array when no file exists', async () => {
+        const result = await provider.readSprints();
+        assert.deepStrictEqual(result, []);
+    });
+
+    test('label includes workspace directory name', () => {
+        assert.ok(provider.label.includes('.vscode'));
+    });
 });
 
 // ---------------------------------------------------------------------------

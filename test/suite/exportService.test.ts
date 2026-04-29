@@ -148,4 +148,102 @@ describe("ExportService", () => {
     test("importFromJson() throws for malformed JSON", async () => {
         await assert.rejects(() => svc.importFromJson("not json at all"), /Invalid JSON|SyntaxError/i);
     });
+
+    test("importFromJson() throws for non-array JSON", async () => {
+        await assert.rejects(() => svc.importFromJson('{"foo":1}'), /Expected a JSON array/i);
+    });
+
+    test("importFromJson() skips malformed entries and still imports valid ones", async () => {
+        const good = await db.createIssue(mkPart({ title: "Good" }));
+        const exported = JSON.parse(svc.export("json")) as unknown[];
+        // Delete so we can re-import
+        await db.deleteIssue(good.id);
+        // Add a malformed entry (missing sequentialId)
+        exported.push({ id: "bad-entry", title: "Bad" });
+        const imported = await svc.importFromJson(JSON.stringify(exported));
+        assert.strictEqual(imported, 1);
+    });
+
+    test("export github-json returns valid JSON array", async () => {
+        await db.createIssue(mkPart({ title: "GH Issue", status: "open", severity: "high", tags: ["ui"] }));
+        const result = svc.export("github-json");
+        const parsed = JSON.parse(result) as unknown[];
+        assert.ok(Array.isArray(parsed));
+        assert.strictEqual(parsed.length, 1);
+    });
+
+    test("export github-json maps resolved status to closed", async () => {
+        await db.createIssue(mkPart({ title: "Resolved GH", status: "resolved" }));
+        const parsed = JSON.parse(svc.export("github-json")) as { state: string }[];
+        assert.strictEqual(parsed[0].state, "closed");
+    });
+
+    test("export github-json maps open status to open", async () => {
+        await db.createIssue(mkPart({ title: "Open GH", status: "open" }));
+        const parsed = JSON.parse(svc.export("github-json")) as { state: string }[];
+        assert.strictEqual(parsed[0].state, "open");
+    });
+
+    test("export github-json includes labels from type, severity, and tags", async () => {
+        await db.createIssue(mkPart({ type: "feature", severity: "critical", tags: ["ui", "perf"] }));
+        const parsed = JSON.parse(svc.export("github-json")) as { labels: string[] }[];
+        assert.ok(parsed[0].labels.includes("feature"));
+        assert.ok(parsed[0].labels.includes("critical"));
+        assert.ok(parsed[0].labels.includes("ui"));
+        assert.ok(parsed[0].labels.includes("perf"));
+    });
+
+    test("export markdown includes detail section with description", async () => {
+        await db.createIssue(mkPart({ title: "Detail Issue", description: "My detailed description" }));
+        const md = svc.export("markdown");
+        assert.ok(md.includes("My detailed description"));
+    });
+
+    test("export markdown shows 'No description' for empty description", async () => {
+        await db.createIssue(mkPart({ title: "No Desc", description: "" }));
+        const md = svc.export("markdown");
+        assert.ok(md.includes("No description"));
+    });
+
+    test("export markdown escapes pipe characters in title", async () => {
+        await db.createIssue(mkPart({ title: "Title | With Pipe" }));
+        const md = svc.export("markdown");
+        assert.ok(md.includes("Title \\| With Pipe"));
+    });
+
+    test("export csv with multiple issues has correct row count", async () => {
+        await db.createIssue(mkPart({ title: "A" }));
+        await db.createIssue(mkPart({ title: "B" }));
+        await db.createIssue(mkPart({ title: "C" }));
+        const lines = svc.export("csv").split("\r\n").filter(Boolean);
+        // 1 header + 3 data rows
+        assert.strictEqual(lines.length, 4);
+    });
+
+    test("export csv includes time entry totals", async () => {
+        await db.createIssue(mkPart({
+            title: "Timed",
+            timeEntries: [
+                { id: "te1", date: "2024-01-01", hours: 1.5, description: "", author: "a", createdAt: new Date().toISOString() },
+                { id: "te2", date: "2024-01-02", hours: 2.5, description: "", author: "b", createdAt: new Date().toISOString() },
+            ],
+        }));
+        const csv = svc.export("csv");
+        assert.ok(csv.includes("4"));
+    });
+
+    test("export csv handles newlines in description", async () => {
+        await db.createIssue(mkPart({ title: "Newline", description: "line1\nline2" }));
+        const csv = svc.export("csv");
+        // Description with newline should be quoted
+        assert.ok(csv.includes('"line1\nline2"'));
+    });
+
+    test("export with explicit issues subset", async () => {
+        const a = await db.createIssue(mkPart({ title: "A" }));
+        await db.createIssue(mkPart({ title: "B" }));
+        const result = JSON.parse(svc.export("json", [a])) as Issue[];
+        assert.strictEqual(result.length, 1);
+        assert.strictEqual(result[0].title, "A");
+    });
 });

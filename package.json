@@ -41,9 +41,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
-    "compile-tests": "tsc -p tsconfig.test.json --noEmit"
+    "compile-tests": "tsc -p tsconfig.test.json --noEmit",
+    "test:e2e": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@types/node": "^24.0.0",
     "@types/sinon": "^21.0.0",
     "@types/vscode": "^1.85.0",
@@ -56,7 +58,6 @@
     "typescript": "^5.9.3",
     "vitest": "^4.1.2"
   },
-  
   "activationEvents": [
     "onStartupFinished"
   ],

@@ -16,3 +16,6 @@ vetspresso.vscode.issues.code-workspace
 **/*.map
 **/.DS_Store
 .windsurfrules
+playwright.config.ts
+playwright-report/**
+tests/**
