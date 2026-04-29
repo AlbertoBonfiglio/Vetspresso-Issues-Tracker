@@ -176,7 +176,7 @@ export async function cmdEditSprint(service: IssueService, sprint: Sprint): Prom
     if (!name) { return; }
 
     const description = await vscode.window.showInputBox({
-        title: `Edit Sprint — Goal`,
+        title: 'Edit Sprint — Goal',
         value: sprint.description ?? '',
         prompt: 'Sprint goal or summary (optional).',
     });

@@ -9,11 +9,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`on-hold` issue status**: issues can now be placed on hold; reflected in tree badges, filters, dashboard counts, and detail panel dropdown.
+- **`cancelled` sprint status**: sprints can now be cancelled; shown in sprint tree view with a distinct icon.
+- **`clones` relation type**: issue relations now support a "clones" link in addition to the existing six relation types.
+- **`changelogGroupByType` setting** (`vetspresso-issues.changelogGroupByType`): controls whether changelog entries are grouped by issue type.
+- **`exportDateFormat` setting** (`vetspresso-issues.exportDateFormat`): choose between `iso`, `locale`, or `short` date formats in CSV/Markdown/GitHub exports.
+- **`sprintLengthDays` setting** (`vetspresso-issues.sprintLengthDays`): default sprint duration auto-suggests the end date when creating sprints.
+- **`compile-tests` npm script**: matches the task referenced in `.vscode/tasks.json` and `launch.json`.
+- **JSDoc on all exported symbols**: every exported function, class, interface, type, and constant now has a JSDoc comment.
+- **Playwright E2E infrastructure**: `@playwright/test` devDependency, `playwright.config.ts`, `tests/e2e/` with baseline tests (extension activation, sidebar registration).
+- **`test:e2e` npm script** for running Playwright E2E tests.
+- **22 additional unit tests** covering ExportService (github-json, markdown details, CSV edge cases), IssueDecorationProvider (event handlers), and storage providers (default templates, branch paths). Total: 402 tests across 14 files.
+
+### Changed
+
+- **All type-only imports converted to `import type`** across `src/` for smaller compiled bundles.
+- **ESLint `no-console` set to `error`** (with `allow: ['warn', 'error']`) to prevent accidental console usage.
+- **README.md settings table** synchronized with actual `package.json` configuration keys; added 4 previously undocumented settings (`defaultIssueType`, `gitIntegration`, `showStatusBar`, `treeGroupBy`).
+- **CONTRIBUTING.md** updated: replaced Mocha/`@vscode/test-electron` references with Vitest, expanded test file tree (14 files), updated "Adding Tests" instructions.
+- **CI pipeline** (`.github/workflows/ci.yml`) now runs `npm run lint` before tests.
+- **`.vscodeignore`** updated to exclude `.windsurfrules`, `playwright.config.ts`, `playwright-report/`, and `tests/`.
+
 ### Fixed
 
+- **Double semicolon** on line 95 of `extension.ts`.
 - **Issue detail panel — buttons and inputs were silently no-ops.** Inline event handlers (`onclick`, `onchange`, `onblur`) are blocked by VS Code's Content Security Policy when a nonce is present. All event bindings have been moved into the nonce-protected `<script>` block using `addEventListener`. Affected controls: status dropdown, assignee input, Save Description button, Add Comment button, Log Time button, Edit button, Copy ID button.
+- **ESLint quotes warning** in `milestoneCommands.ts` (template literal → single-quoted string).
 
-### Added
+### Added (prior cycle)
 
 - **Inline description editing** in the issue detail panel: description is now an editable textarea with a "Save Description" button.
 - **Sprint and Milestone dropdowns** in the issue detail panel: both fields can now be changed directly from the panel without going through the Edit command.
