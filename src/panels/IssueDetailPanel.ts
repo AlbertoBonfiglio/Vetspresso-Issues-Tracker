@@ -23,8 +23,12 @@ export class IssueDetailPanel {
   private static panels = new Map<string, IssueDetailPanel>();
   private readonly panel: vscode.WebviewPanel;
   private issue: Issue;
-  private isSelfUpdate = false;
   private readonly disposables: vscode.Disposable[] = [];
+
+  // Track pending updates to avoid race conditions with onIssueChanged
+  private pendingUpdate: Promise<void> | null = null;
+  private lastUpdateTime = 0;
+  private readonly UPDATE_WINDOW_MS = 500; // Window to consider an update "ours"
 
   static show(
     extensionUri: vscode.Uri,
@@ -81,9 +85,13 @@ export class IssueDetailPanel {
     this.service.onIssueChanged((event) => {
       if (event.issue.id === this.issue.id) {
         this.issue = event.issue;
-        if (!this.isSelfUpdate) {
+        // Check if this change was triggered by our own pending update
+        const isOurUpdate = this.pendingUpdate !== null &&
+          (Date.now() - this.lastUpdateTime) < this.UPDATE_WINDOW_MS;
+        if (!isOurUpdate) {
           this.panel.title = `Issue #${event.issue.sequentialId}`;
-          this.panel.webview.html = this.buildHtml();
+          // Notify webview of external change - let it decide whether to refresh
+          void this.panel.webview.postMessage({ command: 'externalChange', issue: event.issue });
         }
       }
     });
@@ -92,11 +100,28 @@ export class IssueDetailPanel {
   update(issue: Issue): void {
     this.issue = issue;
     this.panel.title = `Issue #${issue.sequentialId}`;
-    this.panel.webview.html = this.buildHtml();
+    // Send patch update instead of full HTML rebuild to preserve form state
+    void this.panel.webview.postMessage({ command: 'patchIssue', issue });
   }
 
   private async handleMessage(msg: WebviewMsg): Promise<void> {
-    this.isSelfUpdate = true;
+    // Track this update to prevent race condition with onIssueChanged
+    const updatePromise = this.executeUpdate(msg);
+    this.pendingUpdate = updatePromise;
+    this.lastUpdateTime = Date.now();
+    try {
+      await updatePromise;
+    } finally {
+      // Clear pending update after a short delay to allow onIssueChanged to fire
+      setTimeout(() => {
+        if (this.pendingUpdate === updatePromise) {
+          this.pendingUpdate = null;
+        }
+      }, this.UPDATE_WINDOW_MS);
+    }
+  }
+
+  private async executeUpdate(msg: WebviewMsg): Promise<void> {
     try {
       switch (msg.command) {
         case 'updateStatus':
@@ -183,8 +208,8 @@ export class IssueDetailPanel {
       }
     } catch (err) {
       void this.panel.webview.postMessage({ command: 'error', message: String(err) });
-    } finally {
-      this.isSelfUpdate = false;
+      // Re-sync issue state after error
+      void this.panel.webview.postMessage({ command: 'patchIssue', issue: this.issue });
     }
   }
 
@@ -200,9 +225,14 @@ export class IssueDetailPanel {
     const i = this.issue;
     const logged = totalLoggedHours(i);
 
-    const knownTagsJson = JSON.stringify(this.service.getKnownTags());
-    const knownPersonsJson = JSON.stringify(this.service.getKnownPersons());
-    const currentTagsJson = JSON.stringify(i.tags);
+    // Helper to safely embed JSON in script tag context
+    const safeJson = (obj: unknown): string =>
+      JSON.stringify(obj).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/</g, '\\u003c');
+
+    const knownTagsJson = safeJson(this.service.getKnownTags());
+    const knownPersonsJson = safeJson(this.service.getKnownPersons());
+    const currentTagsJson = safeJson(i.tags);
+    const currentIssueJson = safeJson(i);
 
     const statusOptions = (
       ['open', 'in-progress', 'in-review', 'on-hold', 'resolved', 'closed', 'wontfix', 'duplicate'] as IssueStatus[]
@@ -257,6 +287,7 @@ export class IssueDetailPanel {
       padding: 16px 20px;
       margin: 0;
     }
+    body.has-conflict-banner { padding-top: 50px; }
     h1 { font-size: 1.3em; margin: 0 0 4px; }
     h2 { font-size: 1em; text-transform: uppercase; letter-spacing: .05em; color: var(--vscode-descriptionForeground); margin: 20px 0 6px; }
     .meta-row { display: flex; flex-wrap: wrap; gap: 8px 24px; margin: 8px 0 16px; font-size: .9em; }
@@ -341,6 +372,10 @@ export class IssueDetailPanel {
 </head>
 <body>
   <div id="toast"></div>
+  <div id="conflictBanner" style="display:none;position:fixed;top:0;left:0;right:0;background:var(--vscode-editorWarning-background,#5a4a20);color:var(--vscode-editorWarning-foreground,#f0f0f0);padding:8px 16px;font-size:.9em;z-index:100;align-items:center;justify-content:space-between">
+    <span>⚠ You have unsaved changes</span>
+    <button id="btnDiscardChanges" class="btn btn-sm" style="background:var(--vscode-button-secondaryBackground)">Discard Changes</button>
+  </div>
   <div class="toolbar">
     <button id="btnEdit" class="btn btn-sm btn-secondary">✏ Edit</button>
     <button id="btnCopyId" class="btn btn-sm btn-secondary">⎘ Copy #${i.sequentialId}</button>
@@ -460,20 +495,170 @@ export class IssueDetailPanel {
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
 
-    // Data embedded from extension
-    let knownTags = ${knownTagsJson};
-    let knownPersons = ${knownPersonsJson};
-    let currentTags = ${currentTagsJson};
+    // Data embedded from extension - safely parsed from JSON strings
+    let knownTags = JSON.parse('${knownTagsJson}');
+    let knownPersons = JSON.parse('${knownPersonsJson}');
+    let currentTags = JSON.parse('${currentTagsJson}');
+    let currentIssue = JSON.parse('${currentIssueJson}');
+
+    // ---- Dirty State Tracking ----
+    const DIRTY_KEY = 'dirtyFields';
+    const FIELD_SELECTORS = {
+      description: '#descriptionEdit',
+      reportedBy: '#reportedByInput',
+      assignedTo: '#assigneeInput',
+      reportedInVersion: '#reportedInInput',
+      targetVersion: '#targetVersionInput',
+      fixedInVersion: '#fixedInInput',
+      tagInput: '#tagInput',
+      commentBody: '#commentBody',
+      logHours: '#logHours',
+      logDesc: '#logDesc'
+    };
+
+    function getState() {
+      return vscode.getState() || {};
+    }
+
+    function setState(state) {
+      vscode.setState(state);
+    }
+
+    function markDirty(field, value) {
+      const state = getState();
+      if (!state[DIRTY_KEY]) state[DIRTY_KEY] = {};
+      state[DIRTY_KEY][field] = value;
+      setState(state);
+      updateConflictBanner();
+    }
+
+    function clearDirty(field) {
+      const state = getState();
+      if (state[DIRTY_KEY]) {
+        delete state[DIRTY_KEY][field];
+        setState(state);
+      }
+      updateConflictBanner();
+    }
+
+    function hasDirtyFields() {
+      const state = getState();
+      return state[DIRTY_KEY] && Object.keys(state[DIRTY_KEY]).length > 0;
+    }
+
+    function getDirtyFields() {
+      const state = getState();
+      return state[DIRTY_KEY] || {};
+    }
+
+    function clearAllDirty() {
+      const state = getState();
+      delete state[DIRTY_KEY];
+      setState(state);
+      updateConflictBanner();
+    }
+
+    // Restore dirty values after HTML rebuild
+    function restoreDirtyValues() {
+      const dirty = getDirtyFields();
+      for (const [field, value] of Object.entries(dirty)) {
+        const selector = FIELD_SELECTORS[field];
+        if (selector) {
+          const el = document.querySelector(selector);
+          if (el) el.value = value;
+        }
+      }
+    }
+
+    function updateConflictBanner() {
+      const banner = document.getElementById('conflictBanner');
+      const hasDirty = hasDirtyFields();
+      if (banner) {
+        banner.style.display = hasDirty ? 'flex' : 'none';
+      }
+      document.body.classList.toggle('has-conflict-banner', hasDirty);
+    }
+
+    // Discard all unsaved changes
+    document.getElementById('btnDiscardChanges').addEventListener('click', () => {
+      clearAllDirty();
+      // Reload from server data
+      if (currentIssue) {
+        patchIssue(currentIssue);
+      }
+      showToast('Changes discarded');
+    });
 
     function escH(s) {
       return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
     }
 
-    function showToast(msg) {
+    function showToast(msg, duration = 2000) {
       const t = document.getElementById('toast');
       t.textContent = msg;
       t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 2000);
+      setTimeout(() => t.classList.remove('show'), duration);
+    }
+
+    // Patch issue data from server without full page refresh
+    function patchIssue(issue) {
+      currentIssue = issue;
+      currentTags = issue.tags;
+      knownTags = [...new Set([...knownTags, ...issue.tags])].sort();
+
+      // Update read-only fields
+      const titleEl = document.querySelector('h1');
+      if (titleEl) titleEl.textContent = '#' + issue.sequentialId + ' ' + issue.title;
+
+      // Update status dropdown
+      const statusSelect = document.getElementById('statusSelect');
+      if (statusSelect) statusSelect.value = issue.status;
+
+      // Update sprint/milestone dropdowns
+      const sprintSelect = document.getElementById('sprintSelect');
+      if (sprintSelect && !getDirtyFields().sprintId) sprintSelect.value = issue.sprintId || '';
+      const milestoneSelect = document.getElementById('milestoneSelect');
+      if (milestoneSelect && !getDirtyFields().milestoneId) milestoneSelect.value = issue.milestoneId || '';
+
+      // Update version fields only if not dirty
+      const dirty = getDirtyFields();
+      const versionFields = [
+        ['reportedInInput', 'reportedInVersion'],
+        ['targetVersionInput', 'targetVersion'],
+        ['fixedInInput', 'fixedInVersion']
+      ];
+      for (const [id, field] of versionFields) {
+        if (!dirty[field]) {
+          const el = document.getElementById(id);
+          if (el) {
+            el.value = issue[field] || '';
+            el.dataset.prevValue = el.value;
+          }
+        }
+      }
+
+      // Update person fields only if not dirty
+      if (!dirty.reportedBy) {
+        const el = document.getElementById('reportedByInput');
+        if (el) { el.value = issue.reportedBy; el.dataset.prevValue = el.value; }
+      }
+      if (!dirty.assignedTo) {
+        const el = document.getElementById('assigneeInput');
+        if (el) { el.value = issue.assignedTo || ''; el.dataset.prevValue = el.value; }
+      }
+
+      // Re-render tags
+      renderTagChips();
+      refreshTagDatalist();
+    }
+
+    // Show external change warning
+    function showExternalChangeWarning() {
+      if (hasDirtyFields()) {
+        showToast('Warning: Issue was modified externally. Your unsaved changes are preserved.', 4000);
+      } else {
+        showToast('Issue updated externally');
+      }
     }
 
     // ---- Tags ----
@@ -530,6 +715,7 @@ export class IssueDetailPanel {
       if (currentTags.includes(tag)) {
         showToast('Tag already added');
         document.getElementById('tagInput').value = '';
+        clearDirty('tagInput');
         return;
       }
       if (knownTags.includes(tag)) {
@@ -539,6 +725,7 @@ export class IssueDetailPanel {
         renderTagChips();
         refreshTagDatalist();
         document.getElementById('tagInput').value = '';
+        clearDirty('tagInput');
         showToast('Tag added');
       } else {
         // New tag — ask for confirmation
@@ -565,6 +752,7 @@ export class IssueDetailPanel {
       renderTagChips();
       refreshTagDatalist();
       document.getElementById('tagInput').value = '';
+      clearDirty('tagInput');
       row.style.display = 'none';
       showToast('Tag added and saved');
     });
@@ -574,7 +762,7 @@ export class IssueDetailPanel {
     });
 
     // ---- Persons (reportedBy + assignee) ----
-    function onPersonSave(fieldId, command) {
+    function onPersonSave(fieldId, command, dirtyKey) {
       const input = document.getElementById(fieldId);
       const value = input.value.trim();
       const prev = input.dataset.prevValue || '';
@@ -582,16 +770,29 @@ export class IssueDetailPanel {
       vscode.postMessage({ command: command, value });
       if (value) { knownPersons = [...new Set([...knownPersons, value])].sort(); refreshPersonDatalist(); }
       input.dataset.prevValue = value;
+      clearDirty(dirtyKey);
       showToast('Saved');
     }
 
     document.getElementById('reportedByInput').dataset.prevValue = document.getElementById('reportedByInput').value;
     document.getElementById('assigneeInput').dataset.prevValue = document.getElementById('assigneeInput').value;
 
-    document.getElementById('reportedByInput').addEventListener('blur', () => onPersonSave('reportedByInput', 'updateReportedBy'));
-    document.getElementById('assigneeInput').addEventListener('blur', () => onPersonSave('assigneeInput', 'updateAssignee'));
-    document.getElementById('reportedByInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); onPersonSave('reportedByInput', 'updateReportedBy'); } });
-    document.getElementById('assigneeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); onPersonSave('assigneeInput', 'updateAssignee'); } });
+    // Track input changes for dirty state
+    document.getElementById('reportedByInput').addEventListener('input', (e) => markDirty('reportedBy', e.target.value));
+    document.getElementById('assigneeInput').addEventListener('input', (e) => markDirty('assignedTo', e.target.value));
+    document.getElementById('descriptionEdit').addEventListener('input', (e) => markDirty('description', e.target.value));
+    document.getElementById('reportedInInput').addEventListener('input', (e) => markDirty('reportedInVersion', e.target.value));
+    document.getElementById('targetVersionInput').addEventListener('input', (e) => markDirty('targetVersion', e.target.value));
+    document.getElementById('fixedInInput').addEventListener('input', (e) => markDirty('fixedInVersion', e.target.value));
+    document.getElementById('tagInput').addEventListener('input', (e) => markDirty('tagInput', e.target.value));
+    document.getElementById('commentBody').addEventListener('input', (e) => markDirty('commentBody', e.target.value));
+    document.getElementById('logHours').addEventListener('input', (e) => markDirty('logHours', e.target.value));
+    document.getElementById('logDesc').addEventListener('input', (e) => markDirty('logDesc', e.target.value));
+
+    document.getElementById('reportedByInput').addEventListener('blur', () => onPersonSave('reportedByInput', 'updateReportedBy', 'reportedBy'));
+    document.getElementById('assigneeInput').addEventListener('blur', () => onPersonSave('assigneeInput', 'updateAssignee', 'assignedTo'));
+    document.getElementById('reportedByInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); onPersonSave('reportedByInput', 'updateReportedBy', 'reportedBy'); } });
+    document.getElementById('assigneeInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); onPersonSave('assigneeInput', 'updateAssignee', 'assignedTo'); } });
 
     document.getElementById('btnEdit').addEventListener('click', () => {
       vscode.postMessage({ command: 'openEditor' });
@@ -604,17 +805,18 @@ export class IssueDetailPanel {
       vscode.postMessage({ command: 'updateStatus', value: e.target.value });
       showToast('Status saved');
     });
-    function saveVersionField(id, command) {
+    function saveVersionField(id, command, dirtyKey) {
       const el = document.getElementById(id);
       vscode.postMessage({ command: command, value: el.value });
       el.dataset.prevValue = el.value;
+      clearDirty(dirtyKey);
       showToast('Saved');
     }
-    [['reportedInInput','updateReportedInVersion'],['targetVersionInput','updateTargetVersion'],['fixedInInput','updateFixedInVersion']].forEach(([id, cmd]) => {
+    [['reportedInInput','updateReportedInVersion','reportedInVersion'],['targetVersionInput','updateTargetVersion','targetVersion'],['fixedInInput','updateFixedInVersion','fixedInVersion']].forEach(([id, cmd, dirtyKey]) => {
       const el = document.getElementById(id);
       el.dataset.prevValue = el.value;
-      el.addEventListener('blur', () => { if (el.value !== el.dataset.prevValue) { saveVersionField(id, cmd); } });
-      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveVersionField(id, cmd); } });
+      el.addEventListener('blur', () => { if (el.value !== el.dataset.prevValue) { saveVersionField(id, cmd, dirtyKey); } });
+      el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveVersionField(id, cmd, dirtyKey); } });
     });
     document.getElementById('btnSaveFields').addEventListener('click', () => {
       vscode.postMessage({
@@ -628,19 +830,27 @@ export class IssueDetailPanel {
       document.getElementById('reportedByInput').dataset.prevValue = document.getElementById('reportedByInput').value;
       document.getElementById('assigneeInput').dataset.prevValue = document.getElementById('assigneeInput').value;
       ['reportedInInput','targetVersionInput','fixedInInput'].forEach(id => { document.getElementById(id).dataset.prevValue = document.getElementById(id).value; });
+      clearDirty('reportedBy');
+      clearDirty('assignedTo');
+      clearDirty('reportedInVersion');
+      clearDirty('targetVersion');
+      clearDirty('fixedInVersion');
       showToast('Saved');
     });
     document.getElementById('sprintSelect').addEventListener('change', (e) => {
       vscode.postMessage({ command: 'updateSprint', value: e.target.value });
+      clearDirty('sprintId');
       showToast('Sprint saved');
     });
     document.getElementById('milestoneSelect').addEventListener('change', (e) => {
       vscode.postMessage({ command: 'updateMilestone', value: e.target.value });
+      clearDirty('milestoneId');
       showToast('Milestone saved');
     });
     document.getElementById('btnSaveDesc').addEventListener('click', () => {
       const value = document.getElementById('descriptionEdit').value;
       vscode.postMessage({ command: 'updateDescription', value });
+      clearDirty('description');
       showToast('Description saved');
     });
     document.getElementById('btnAddComment').addEventListener('click', () => {
@@ -648,6 +858,7 @@ export class IssueDetailPanel {
       if (!body) return;
       vscode.postMessage({ command: 'addComment', body });
       document.getElementById('commentBody').value = '';
+      clearDirty('commentBody');
       showToast('Comment added');
     });
     document.getElementById('btnLogTime').addEventListener('click', () => {
@@ -658,14 +869,34 @@ export class IssueDetailPanel {
       vscode.postMessage({ command: 'logTime', hours, date, description });
       document.getElementById('logHours').value = '';
       document.getElementById('logDesc').value = '';
+      clearDirty('logHours');
+      clearDirty('logDesc');
       showToast('Time logged');
     });
+    // Handle messages from extension
     window.addEventListener('message', (event) => {
-      if (event.data && event.data.command === 'error') {
-        showToast('Error: ' + event.data.message);
-        console.error('Extension error:', event.data.message);
+      if (!event.data) return;
+      switch (event.data.command) {
+        case 'error':
+          showToast('Error: ' + event.data.message, 4000);
+          console.error('Extension error:', event.data.message);
+          break;
+        case 'patchIssue':
+          patchIssue(event.data.issue);
+          break;
+        case 'externalChange':
+          showExternalChangeWarning();
+          patchIssue(event.data.issue);
+          break;
+        case 'saveConfirmed':
+          clearDirty(event.data.field);
+          break;
       }
     });
+
+    // Restore any dirty values and setup conflict banner on load
+    restoreDirtyValues();
+    updateConflictBanner();
   </script>
 </body>
 </html>`;
